@@ -166,18 +166,6 @@ def medmnist(args):
     return trd, vad, ted
 
 
-def pamap(args):
-    data = PamapDataset(args.root_dir+'pamap/')
-    trd, vad, ted = getlabeldataloader(args, data)
-    args.num_classes = 10
-    return trd, vad, ted
-
-
-def covid(args):
-    data = CovidDataset(args.root_dir+'covid19/')
-    trd, vad, ted = getlabeldataloader(args, data)
-    args.num_classes = 4
-    return trd, vad, ted
 
 
 class combinedataset(mydataset):
@@ -216,16 +204,6 @@ def medmnist_w(args):
     return data
 
 
-def pamap_w(args):
-    data = PamapDataset(args.root_dir+'pamap/')
-    args.num_classes = 10
-    return data
-
-
-def covid_w(args):
-    data = CovidDataset(args.root_dir+'covid19/')
-    args.num_classes = 4
-    return data
 
 
 def get_whole_dataset(data_name):

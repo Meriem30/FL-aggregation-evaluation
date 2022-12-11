@@ -274,7 +274,7 @@ def record_class_distribution(partitions, targets):
 
 def define_val_dataset(conf, train_dataset):
     partition_sizes = [
-        0.4, 0.3, 0.3
+        0.5, 0.2, 0.3
     ]
     data_partitioner = DataPartitioner(
         conf,

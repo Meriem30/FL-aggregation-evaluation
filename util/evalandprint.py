@@ -12,9 +12,11 @@ import torch
 
 def evalandprint(args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter, best_changed):
     # evaluation on training data
+    train_loss_list = [None] * args.n_clients
     for client_idx in range(args.n_clients):
         train_loss, train_acc = algclass.client_eval(
             client_idx, train_loaders[client_idx])
+        train_loss_list[client_idx] = train_loss
         print(' Site-{:02d} | Train Loss: {:.4f} | Train Acc: {:.4f}'.format(client_idx,train_loss,train_acc))
 
     # evaluation on valid data
@@ -29,7 +31,7 @@ def evalandprint(args, algclass, train_loaders, val_loaders, test_loaders, SAVE_
         for client_idx in range(args.n_clients):
             best_acc[client_idx] = val_acc_list[client_idx]
             best_epoch = a_iter
-        best_changed = True
+        best_changed = True 
 
     if best_changed:
         best_changed = False
@@ -51,5 +53,6 @@ def evalandprint(args, algclass, train_loaders, val_loaders, test_loaders, SAVE_
             print(param_tensor, "\t", algclass.server_model.state_dict()[param_tensor].size())
             
         torch.save(tosave, SAVE_PATH)
+
 
     return best_acc, best_tacc, best_changed

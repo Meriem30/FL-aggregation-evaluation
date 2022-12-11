@@ -6,7 +6,7 @@ Created on Mon Nov 28 16:43:17 2022
 """
 
 from alg.fedavg import fedavg
-#from alg.fedprox import fedprox
+from alg.fedprox import fedprox
 #from alg.fedbn import fedbn
 #from alg.base import base
 #from alg.fedap import fedap
