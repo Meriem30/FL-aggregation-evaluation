@@ -11,12 +11,14 @@ import torch
 import argparse
 import pandas as pd 
 import csv
+import datetime
 
 from datautil.prepare_data import *
 from util.config import img_param_init, set_random_seed
 from util.evalandprint import evalandprint
 from alg import algs
 
+from n_clients_plot_acc import plotResults
 
 
 if __name__ == '__main__':
@@ -154,7 +156,28 @@ if __name__ == '__main__':
     test_acc = [0]* args.n_clients
     for i in range(test_acc):
         test_acc[i] =  mean_acc_test* (i+1)
-    with open('acuuracy_results.csv', mode='w') as f:
+        
+    #store results    
+    date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    results_folder = os.path.join(os.path.dirname(__file__), "results/n_clients/accuracy_results_{args.alg}_{args.datapercent}_{args.non_iid_alpha}_{args.mu}_{args.iters}_{args.wk_iters}.csv" + str(date))
+    os.mkdir(results_folder)
+    
+    #name file to record reslts
+    file_fedavg, file_fedprox, file_fedbn,  file_fedap, file_metafed = ''
+    
+    if args.alg.equals('fedavg'):
+        file_fedavg = results_folder
+    elif args.alg.equals('fedprox'):
+        file_fedprox = results_folder
+    elif args.alg.equals('fedbn'):
+        file_fedbn = results_folder
+    elif args.alg.equals('fedap'):
+        file_fedap = results_folder
+    elif args.alg.equals('metafed'):
+        file_metafed = results_folder
+    
+    
+    with open(results_folder, mode='w') as f:
         fieldnames = ['num_clients','avg-test-accuracy', 'avg-test-loss']
         csv_writer = csv.DictWriter(f, fieldnames)
         
@@ -164,8 +187,10 @@ if __name__ == '__main__':
         csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[1] , 'avg-test-loss': 1-mean_acc_test})
         csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[2] , 'avg-test-loss': 1-mean_acc_test})
         csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[3] , 'avg-test-loss': 1-mean_acc_test})
-        csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[4] , 'avg-test-loss': 1-mean_acc_test})
-        csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[5] , 'avg-test-loss': 1-mean_acc_test})
-    f.close()   
+        
+    f.close()
+    
+    if args.alg.equals('metafed'):
+        plotResults(file_fedavg, file_fedprox, file_fedbn,  file_fedap, file_metafed)
     
 #run : python main.py --alg fedavg --dataset medmnist --iters 3 --wk_iters 1 --non_iid_alpha 0.1
