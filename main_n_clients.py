@@ -126,7 +126,7 @@ if __name__ == '__main__':
                 # local client training
                 for wi in range(args.wk_iters):
                     for client_idx in range(args.n_clients):
-                        print ('client_idx : ',client_idx )
+                        print('client_idx : ', client_idx)
                         algclass.client_train(
                             client_idx, train_loaders[client_idx], a_iter)
     
@@ -178,15 +178,15 @@ if __name__ == '__main__':
     
     
     with open(results_folder, mode='w') as f:
-        fieldnames = ['num_clients','avg-test-accuracy', 'avg-test-loss']
+        fieldnames = ['num_clients','avg-test-accuracy']
         csv_writer = csv.DictWriter(f, fieldnames)
         
         csv_writer.writeheader()
         
-        csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[0] , 'avg-test-loss': 1-mean_acc_test})
-        csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[1] , 'avg-test-loss': 1-mean_acc_test})
-        csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[2] , 'avg-test-loss': 1-mean_acc_test})
-        csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[3] , 'avg-test-loss': 1-mean_acc_test})
+        csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[0]})
+        csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[1]})
+        csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[2]})
+        csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[3]})
         
     f.close()
     
