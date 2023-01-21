@@ -1,0 +1,2 @@
+E:\MeriemArbaoui\FL-evaluations\FL-avg\results/n_clients/accuracy_results_fedavg_1_0.1_0.001_10_12023-01-18_11-56-13
+E:\MeriemArbaoui\FL-evaluations\FL-avg\results/n_clients/accuracy_results_fedprox_1_0.1_0.001_10_12023-01-18_14-32-15

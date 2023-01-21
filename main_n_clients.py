@@ -36,7 +36,7 @@ if __name__ == '__main__':
     parser.add_argument('--device', type=str,
                         default='cpu', help='[cuda | cpu]')
     parser.add_argument('--batch', type=int, default=32, help='batch size')
-    parser.add_argument('--iters', type=int, default=300,
+    parser.add_argument('--iters', type=int, default=10,
                         help='iterations for communication')
     parser.add_argument('--lr', type=float, default=1e-2, help='learning rate')
     parser.add_argument('--n_clients', type=int, 
@@ -98,9 +98,52 @@ if __name__ == '__main__':
 
 
     #
+    # store results
+    date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    exp_folder = f"accuracy_results_{args.alg}_{args.datapercent}_{args.non_iid_alpha}_{args.mu}_{args.iters}_{args.wk_iters}" + str(date)
+    results_folder = os.path.join(os.path.dirname(__file__),
+                                  "results/n_clients/" + exp_folder)
+    os.mkdir(results_folder)
+    res_files_name = "results/n_clients/name_file_res_algos.txt"
+    # name file to record reslts
+    file_fedavg, file_fedprox, file_fedbn, file_fedap, file_metafed = 'f.txt'
+
+    if args.alg == 'fedavg':
+        with open(res_files_name, mode='w') as fn:
+            fn.write(results_folder)
+        fn.close()
+
+    elif args.alg == 'fedprox':
+        with open(res_files_name, mode='a') as fn:
+            fn.write("\n"+results_folder)
+        fn.close()
+    elif args.alg == 'fedbn':
+        file_res = exp_folder
+        with open(res_files_name, mode='a') as fn:
+            fn.write("\n" + results_folder)
+        fn.close()
+    elif args.alg == 'fedap':
+        with open(res_files_name, mode='a') as fn:
+            fn.write("\n" + results_folder)
+        fn.close()
+    elif args.alg == 'metafed':
+        with open(res_files_name, mode='a') as fn:
+            fn.write("\n" + results_folder)
+        fn.close()
+
+
+    with open(results_folder +"/acc.csv", newline='', encoding='utf-8', mode='w') as f:
+        fieldnames = ['num_clients', 'avg-test-accuracy']
+        csv_writer = csv.DictWriter(f, fieldnames)
+
+        csv_writer.writeheader()
+
+
     start_tuning= 0
-    n_clients = [5,10,15,20]
-    mean_acc_test = [0] * len(n_clients)
+    #n_clients = [5,10,15,20]
+    n_clients = [3,5,7,10]
+    #mean_acc_test = [0] * len(n_clients)
+    test_acc = [0] * args.n_clients
     for i in range(start_tuning, len(n_clients)):
         
         best_changed = False
@@ -152,45 +195,15 @@ if __name__ == '__main__':
         print(s)
         
         print('my results: ', mean_acc_test)
-        
-    test_acc = [0]* args.n_clients
-    for i in range(test_acc):
-        test_acc[i] =  mean_acc_test* (i+1)
-        
-    #store results    
-    date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    results_folder = os.path.join(os.path.dirname(__file__), "results/n_clients/accuracy_results_{args.alg}_{args.datapercent}_{args.non_iid_alpha}_{args.mu}_{args.iters}_{args.wk_iters}.csv" + str(date))
-    os.mkdir(results_folder)
-    
-    #name file to record reslts
-    file_fedavg, file_fedprox, file_fedbn,  file_fedap, file_metafed = ''
-    
-    if args.alg.equals('fedavg'):
-        file_fedavg = results_folder
-    elif args.alg.equals('fedprox'):
-        file_fedprox = results_folder
-    elif args.alg.equals('fedbn'):
-        file_fedbn = results_folder
-    elif args.alg.equals('fedap'):
-        file_fedap = results_folder
-    elif args.alg.equals('metafed'):
-        file_metafed = results_folder
-    
-    
-    with open(results_folder, mode='w') as f:
-        fieldnames = ['num_clients','avg-test-accuracy']
-        csv_writer = csv.DictWriter(f, fieldnames)
-        
-        csv_writer.writeheader()
-        
-        csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[0]})
-        csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[1]})
-        csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[2]})
-        csv_writer.writerow({'num_clients' : args.n_clients, 'avg-test-accuracy': test_acc[3]})
-        
+
+
+        with open(results_folder + "/acc.csv", newline='', encoding='utf-8', mode='a') as f:
+            csv_writer = csv.DictWriter(f, fieldnames)
+            csv_writer.writerow({'num_clients': args.n_clients, 'avg-test-accuracy': mean_acc_test})
+
+
     f.close()
-    
-    if args.alg.equals('metafed'):
-        plotResults(file_fedavg, file_fedprox, file_fedbn,  file_fedap, file_metafed)
-    
-#run : python main.py --alg fedavg --dataset medmnist --iters 3 --wk_iters 1 --non_iid_alpha 0.1
+    #if args.alg == 'fedavg':
+    #    plotResults(files, )
+
+#run : python main_n_clients.py --alg fedavg --dataset medmnist --iters 3 --wk_iters 1 --non_iid_alpha 0.1
