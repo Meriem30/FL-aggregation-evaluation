@@ -23,7 +23,7 @@ class fedap(fedavg):
                            preckpt, self.args.device)
         self.preckpt = preckpt
         self.client_weight = get_weight_preckpt(
-            self.args, self.pretrain_model, self.preckpt, train_loaders, self.client_weight)
+            self.args, self.pretrain_model, self.preckpt, train_loaders, self.client_weight, self.args.device)
 
 
 def get_form(model):
