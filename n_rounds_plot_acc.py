@@ -18,7 +18,7 @@ def plotOneAlg(file_name, metric,marker,label,ax ):
     if metric == 'acc':
         ax.plot(nb_rounds, test_acc, marker=marker, label=label)
         plt.xlabel('Number of Iterations')
-        plt.ylabel('Test Accuracy')
+        plt.ylabel('Average Test Accuracy')
     elif metric == 'loss':
         ax.plot(nb_rounds, train_loss, marker=marker, label=label)
         plt.xlabel('Epochs')

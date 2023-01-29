@@ -27,7 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('--alg', type=str, default='fedavg',
                         help='Algorithm to choose: [base | fedavg | fedbn | fedprox | fedap | metafed ]')
     parser.add_argument('--datapercent', type=float,
-                        default=0.1, help='data percent to use')
+                        default=1, help='data percent to use')
     parser.add_argument('--dataset', type=str, default='medmnist',
                         help='[ medmnist ]')
     parser.add_argument('--root_dir', type=str,
@@ -138,7 +138,7 @@ if __name__ == '__main__':
 
     test_acc = [0] * args.n_clients
 
-    # loop over the n_clients param and train the model
+    # loop over the n_rounds param and train the model
     for i in range(len(n_rounds)):
 
         best_changed = False
@@ -204,13 +204,13 @@ if __name__ == '__main__':
 
         print(' the average of accuracy variance ==> fairness :', fair_var)
 
-        # save the accuracy results
+        # save the accuracy and loss results
         with open(results_folder + "/acc.csv", newline='', encoding='utf-8', mode='a') as f:
             csv_writer = csv.DictWriter(f, fieldnames)
             csv_writer.writerow({'n_rounds': args.iters, 'avg-test-accuracy': mean_acc_test, 'avg-train-loss' :mean_train_loss,
                                  'fairness-var' : fair_var})
 
-    # close the accuracy file when the loop is over
+    #close the results file when the loop is over
     f.close()
 
 # run : python main_n_rounds.py --alg fedavg --dataset medmnist  --wk_iters 1 --non_iid_alpha 0.1
