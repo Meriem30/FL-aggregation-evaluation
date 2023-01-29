@@ -8,12 +8,20 @@ from matplotlib import pyplot as plt
 
 import pandas as pd
 
-def plotOneAlg(file_name, marker,label,ax ):
+def plotOneAlg(file_name, metric, marker,label,ax ):
     #read the csv file to plot the result for one algo
     dataframe = pd.read_csv(file_name +"/acc.csv")
     test_acc = dataframe['avg-test-accuracy']
     nb_clients = dataframe['num_clients']
-    ax.plot(nb_clients, test_acc, marker=marker, label=label)
+    train_loss = dataframe['avg-train-loss']
+    if metric == 'acc':
+        ax.plot(nb_clients, test_acc, marker=marker, label=label)
+        plt.xlabel('Number Of Clients')
+        plt.ylabel('Test Accuracy')
+    elif metric == 'loss':
+        ax.plot(nb_clients, train_loss, marker=marker, label=label)
+        plt.xlabel('Number of clients')
+        plt.ylabel('Loss')
     plt.legend()
 
 def plotResults(files, algos, num_algs):
@@ -25,10 +33,15 @@ def plotResults(files, algos, num_algs):
 
     #for each algo(one line) in the results-file-name plot the acc results in one figure
     for i in range(num_algs):
-        plotOneAlg(files[i],marker[i],labels[i],ax)
-        plt.xlabel('Number Of Clients')
-        plt.ylabel('Test Accuracy')
+        metric = 'acc'
+        plotOneAlg(files[i],metric,marker[i],labels[i],ax)
         fig.savefig(files[num_algs-1] + '/n_clients_avg_accu.png', bbox_inches='tight')
+
+    ax2 = fig.add_subplot(1, 1, 1)
+    for i in range(num_algs):
+        metric = 'loss'
+        plotOneAlg(files[i],metric,marker[i],labels[i],ax2)
+        fig.savefig(files[num_algs-1] + '/n_clients_avg_loss.png', bbox_inches='tight')
 
 
 if __name__ == '__main__':

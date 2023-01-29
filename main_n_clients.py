@@ -73,7 +73,8 @@ if __name__ == '__main__':
 
     #get the true number of clients considering the dropout percentage
     _ , args.n_clients = math.modf(args.n_clients * (1 - args.dropout_clients))
-    
+    args.n_clients = int(args.n_clients)
+
     args.random_state = np.random.RandomState(1)
     set_random_seed(args.seed)
     
@@ -131,7 +132,7 @@ if __name__ == '__main__':
 
     #create a csv file to save accuracy result for each value of the parameter (n_clients)
     with open(results_folder +"/acc.csv", newline='', encoding='utf-8', mode='w') as f:
-        fieldnames = ['num_clients', 'avg-test-accuracy']
+        fieldnames = ['num_clients', 'avg-test-accuracy', 'avg-train-loss', 'fairness-var']
         csv_writer = csv.DictWriter(f, fieldnames)
         csv_writer.writeheader()
 
@@ -150,8 +151,12 @@ if __name__ == '__main__':
         args.n_clients = n_clients[i]
         best_acc = [0] * args.n_clients
         best_tacc = [0] * args.n_clients
-        mean_acc_test = 0 
-        
+        mean_acc_test = 0
+
+        train_loss = [0] * args.n_clients
+        val_loss = [0] * args.n_clients
+        mean_train_loss = 0
+
         start_iter = 0
         for a_iter in range(start_iter, args.iters):
             print(f"============ Train round {a_iter} ============")
@@ -173,31 +178,42 @@ if __name__ == '__main__':
     
                 # server aggregation
                 algclass.server_aggre()
-    
-            best_acc, best_tacc, best_changed = evalandprint(
-                args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter, best_changed)
-    
+
+            best_acc, best_tacc, best_changed, train_loss, val_loss = evalandprint(
+                args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter,
+                best_changed, train_loss, val_loss)
         if args.alg == 'metafed':
             print('Personalization stage')
             for c_idx in range(args.n_clients):
                 algclass.personalization(
                     c_idx, train_loaders[algclass.csort[c_idx]], val_loaders[algclass.csort[c_idx]])
-            best_acc, best_tacc, best_changed = evalandprint(
-                args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter, best_changed)
-    
+            best_acc, best_tacc, best_changed, train_loss, val_loss= evalandprint(
+                args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter,
+                best_changed, train_loss, val_loss)
+
         s = 'Personalized test acc for each client: '
         for item in best_tacc:
             s += f'{item:.4f},'
         mean_acc_test = np.mean(np.array(best_tacc))
+        mean_train_loss = np.mean(np.array(train_loss))
+        # variance of the chosen metric (acc) = fairness of the model
+        fair_var = np.var(np.array(best_tacc)) * 10000
+
         s += f'\nAverage accuracy: {mean_acc_test:.4f}'
         print(s)
         
         print('my results: ', mean_acc_test)
 
+        print(' the average of train loss over all clients :', mean_train_loss)
+
+        print(' the average of accuracy variance ==> fairness :', fair_var)
         #save the accuracy results
         with open(results_folder + "/acc.csv", newline='', encoding='utf-8', mode='a') as f:
             csv_writer = csv.DictWriter(f, fieldnames)
-            csv_writer.writerow({'num_clients': args.n_clients, 'avg-test-accuracy': mean_acc_test})
+            csv_writer.writerow({'num_clients': args.n_clients, 'avg-test-accuracy': mean_acc_test,
+                                 'avg-train-loss': mean_train_loss,
+                                 'fairness-var': fair_var
+                                 })
 
     #close the accuracy file when the loop is over
     f.close()

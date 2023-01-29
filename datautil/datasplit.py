@@ -31,7 +31,7 @@ class Partition(object):
     def update_replaced_targets(self, replaced_targets):
         self.replaced_targets = replaced_targets
 
-        # evaluate the the difference between original labels and the simulated labels.
+        # evaluate the difference between original labels and the simulated labels.
         count = 0
         for index in range(len(replaced_targets)):
             data_idx = self.indices[index]
@@ -82,8 +82,8 @@ class DataPartitioner(object):
         if self.partition_type == 'evenly':
             classes = np.unique(self.data.targets)
             lp = len(self.partition_sizes)
-            ti = indices[:, 0]
-            ttar = indices[:, 1]
+            ti = indices[ :0]
+            ttar = indices[ :1]
             for i in range(lp):
                 self.partitions.append(np.array([]))
             for c in classes:
@@ -288,11 +288,12 @@ def define_val_dataset(conf, train_dataset):
 
 def define_data_loader(conf, dataset, data_partitioner=None):
     world_size = conf.n_clients
-    partition_sizes = [1.0 / world_size for _ in range(world_size)]
+    leng= int(world_size)
+    partition_sizes = [1.0 / world_size for _ in range(leng)]
     if data_partitioner is None:
         # update the data_partitioner.
         data_partitioner = DataPartitioner(
-            conf, dataset, partition_sizes, partition_type=conf.partition_data
+            conf, dataset, [int(x) for x in partition_sizes], partition_type=conf.partition_data
         )
     return data_partitioner
 
@@ -305,7 +306,7 @@ def getdataloader(conf, dataall, root_dir='./split/'):
     if not os.path.exists(file):
         data_part = define_data_loader(conf, dataall)
         tmparr = []
-        for i in range(conf.n_clients):
+        for i in range(int(conf.n_clients)):
             tmppart = define_val_dataset(conf, data_part.use(i))
             tmparr.append(tmppart.partitions[0])
             tmparr.append(tmppart.partitions[1])
@@ -319,7 +320,7 @@ def getdataloader(conf, dataall, root_dir='./split/'):
     clienttrain_list = []
     clientvalid_list = []
     clienttest_list = []
-    for i in range(conf.n_clients):
+    for i in range(int(conf.n_clients)):
         clienttrain_list.append(data_part.use(3*i))
         clienttest_list.append(data_part.use(3*i+1))
         clientvalid_list.append(data_part.use(3*i+2))
@@ -335,6 +336,6 @@ def define_pretrain_dataset(conf, train_dataset):
         train_dataset,
         partition_sizes,
         partition_type="evenly",
-        # consistent_indices=False,
+        #consistent_indices=False,
     )
     return data_partitioner.use(0)

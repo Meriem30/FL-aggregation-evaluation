@@ -151,7 +151,7 @@ def getlabeldataloader(args, data):
     trd, vad, ted = [], [], []
     for i in range(len(trl)):
         trd.append(torch.utils.data.DataLoader(
-            trl[i], batch_size=args.batch, shuffle=True))
+            trl[i], batch_size=args.batch, shuffle=False))
         vad.append(torch.utils.data.DataLoader(
             val[i], batch_size=args.batch, shuffle=False))
         ted.append(torch.utils.data.DataLoader(
