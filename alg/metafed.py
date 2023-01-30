@@ -99,3 +99,8 @@ class metafed(torch.nn.Module):
         train_loss, train_acc = test(
             self.client_model[c_idx], dataloader, self.loss_fun, self.args.device)
         return train_loss, train_acc
+
+    def server_eval(self, dataloader):
+        train_loss, train_acc = test(
+            self.server_model, dataloader, self.loss_fun, self.args.device)
+        return train_loss, train_acc

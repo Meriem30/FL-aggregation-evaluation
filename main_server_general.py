@@ -12,6 +12,7 @@ import math
 from datautil.prepare_data import *
 from util.config import img_param_init, set_random_seed
 from util.evalandprint import evalandprint
+from util.evalandprintserver import evalandprintserver
 from alg import algs
 
 from n_clients_plot_acc import plotResults
@@ -22,7 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--alg', type=str, default='fedavg',
                         help='Algorithm to choose: [base | fedavg | fedbn | fedprox | fedap | metafed ]')
     parser.add_argument('--datapercent', type=float,
-                        default=1, help='data percent to use')
+                        default=0.1, help='data percent to use')
     parser.add_argument('--dataset', type=str, default='medmnist',
                         help='[ medmnist ]')
     parser.add_argument('--root_dir', type=str,
@@ -102,11 +103,11 @@ if __name__ == '__main__':
         date)
 
     # create folder to save n_clients results
-    results_folder = os.path.join(os.path.dirname(__file__), "results/n_clients/" + exp_folder)
+    results_folder = os.path.join(os.path.dirname(__file__), "results/server_general/" + exp_folder)
     os.mkdir(results_folder)
 
     # create a csv (or .txt) file to save the results-file-name for each alg
-    res_files_name = "results/n_clients/name_file_res_algos.csv"
+    res_files_name = "results/server_general/name_file_res_algos.csv"
     # res_files_name = "results/n_clients/name_file_res_algos.txt"
 
     # write the file_name into a csv file
@@ -125,7 +126,7 @@ if __name__ == '__main__':
 
     # create a csv file to save accuracy result for each value of the parameter (n_clients)
     with open(results_folder + "/acc.csv", newline='', encoding='utf-8', mode='w') as f:
-        fieldnames = ['num_clients', 'avg-test-accuracy', 'avg-train-loss', 'fairness-var']
+        fieldnames = ['num_clients', 'avg-test-accuracy', 'avg-train-loss', 'fairness-var', 'server-test-accuracy', 'server-train-loss']
         csv_writer = csv.DictWriter(f, fieldnames)
         csv_writer.writeheader()
 
@@ -140,15 +141,23 @@ if __name__ == '__main__':
     for i in range(start_tuning, len(n_clients)):
 
         best_changed = False
+        best_changed_server = False
 
         args.n_clients = n_clients[i]
         best_acc = [0] * args.n_clients
         best_tacc = [0] * args.n_clients
+
+        best_tacc_server = 0
+        best_acc_server = 0
+
         mean_acc_test = 0
 
         train_loss = [0] * args.n_clients
         val_loss = [0] * args.n_clients
         mean_train_loss = 0
+
+        train_loss_server = 0
+        val_loss_server = 0
 
         start_iter = 0
         for a_iter in range(start_iter, args.iters):
@@ -175,6 +184,12 @@ if __name__ == '__main__':
             best_acc, best_tacc, best_changed, train_loss, val_loss = evalandprint(
                 args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter,
                 best_changed, train_loss, val_loss)
+
+            best_acc_server, best_tacc_server, best_changed_server, train_loss_server, val_loss_server = evalandprintserver(
+                args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc_server, best_tacc_server,
+                a_iter,
+                best_changed_server, train_loss_server, val_loss_server)
+
         if args.alg == 'metafed':
             print('Personalization stage')
             for c_idx in range(args.n_clients):
@@ -184,6 +199,10 @@ if __name__ == '__main__':
                 args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter,
                 best_changed, train_loss, val_loss)
 
+            best_acc_server, best_tacc_server, best_changed_server, train_loss_server, val_loss_server = evalandprintserver(
+                args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc_server, best_tacc_server,
+                a_iter,
+                best_changed_server, train_loss_server, val_loss_server)
         s = 'Personalized test acc for each client: '
         for item in best_tacc:
             s += f'{item:.4f},'
@@ -199,19 +218,24 @@ if __name__ == '__main__':
 
         print(' the average of train loss over all clients :', mean_train_loss)
 
-        print(' the average of accuracy variance ==> fairness :', fair_var)
+        print(' the average of client accuracy variance ==> fairness :', fair_var)
+
+        print('the train loss of the global model', train_loss_server)
+
+        print('the test accuracy of the global model', best_tacc_server)
+
         # save the accuracy and loss results
         with open(results_folder + "/acc.csv", newline='', encoding='utf-8', mode='a') as f:
             csv_writer = csv.DictWriter(f, fieldnames)
             csv_writer.writerow({'num_clients': args.n_clients, 'avg-test-accuracy': mean_acc_test,
                                  'avg-train-loss': mean_train_loss,
-                                 'fairness-var': fair_var
+                                 'fairness-var': fair_var,
+                                 'server-test-accuracy': best_tacc_server,
+                                 'server-train-loss' : train_loss_server
+
                                  })
 
     # close the results file when the loop is over
     f.close()
 
 # run : python main_n_clients.py --alg fedavg --dataset medmnist --iters 3 --wk_iters 1 --non_iid_alpha 0.1
-
-
-
