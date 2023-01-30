@@ -71,8 +71,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # get the true number of clients considering the dropout percentage
-    _, args.n_clients = math.modf(args.n_clients * (1 - args.dropout_clients))
-    args.n_clients = int(args.n_clients)
+    #_, args.n_clients = math.modf(args.n_clients * (1 - args.dropout_clients))
+    #args.n_clients = int(args.n_clients)
+
     args.random_state = np.random.RandomState(1)
     set_random_seed(args.seed)
 
@@ -106,11 +107,11 @@ if __name__ == '__main__':
         date)
 
     #create folder to save n_clients results
-    results_folder = os.path.join(os.path.dirname(__file__), "results/n_rounds/" + exp_folder)
+    results_folder = os.path.join(os.path.dirname(__file__), "results/n_drop/" + exp_folder)
     os.mkdir(results_folder)
 
     # create a csv (or .txt) file to save the results-file-name for each alg
-    res_files_name = "results/n_rounds/name_file_res_algos.csv"
+    res_files_name = "results/n_drop/name_file_res_algos.csv"
     # res_files_name = "results/n_rounds/name_file_res_algos.txt"
 
     # write the file_name into a csv file
@@ -129,19 +130,19 @@ if __name__ == '__main__':
 
     # create a csv file to save accuracy result for each value of the parameter (n_rounds)
     with open(results_folder + "/acc.csv", newline='', encoding='utf-8', mode='w') as f:
-        fieldnames = ['n_rounds', 'avg-test-accuracy', 'avg-train-loss', 'fairness-var']
+        fieldnames = ['n_drop', 'avg-test-accuracy', 'avg-train-loss', 'fairness-var']
         csv_writer = csv.DictWriter(f, fieldnames)
         csv_writer.writeheader()
 
-    #list of n_rounds
-    n_rounds = [5, 10, 15, 20]
+    #list of dropout percentage values
+    n_droup = [0, 0.1, 0.2, 0.5]
 
     # loop over the n_rounds param and train the model
-    for i in range(len(n_rounds)):
+    for i in range(len(n_droup)):
 
         best_changed = False
-
-        args.iters = n_rounds[i]
+        args.dropout_clients = n_droup[i]
+        args.n_clients = int(args.n_clients * (1- n_droup[i]))
         best_acc = [0] * args.n_clients
         best_tacc = [0] * args.n_clients
         mean_acc_test = 0
@@ -205,10 +206,8 @@ if __name__ == '__main__':
         # save the accuracy and loss results
         with open(results_folder + "/acc.csv", newline='', encoding='utf-8', mode='a') as f:
             csv_writer = csv.DictWriter(f, fieldnames)
-            csv_writer.writerow({'n_rounds': args.iters, 'avg-test-accuracy': mean_acc_test, 'avg-train-loss' :mean_train_loss,
+            csv_writer.writerow({'n_drop': args.dropout_clients, 'avg-test-accuracy': mean_acc_test, 'avg-train-loss' :mean_train_loss,
                                  'fairness-var' : fair_var})
 
     #close the results file when the loop is over
     f.close()
-
-# run : python main_n_rounds.py --alg fedavg --dataset medmnist  --wk_iters 1 --non_iid_alpha 0.1
