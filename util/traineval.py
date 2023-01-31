@@ -43,8 +43,8 @@ def test(model, data_loader, loss_fun, device):
     correct = 0
     with torch.no_grad():
         for data, target in data_loader:
-            data = data.to('cuda').float()
-            target = target.to('cuda').long()
+            data = data.to(device).float()
+            target = target.to(device).long()
             output = model(data)
             loss = loss_fun(output, target)
             loss_all += loss.item()

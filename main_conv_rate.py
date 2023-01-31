@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Nov 17 14:26:04 2022
+
+@author: TOSHIBA-Portégé C30
+"""
 
 import os
 import numpy as np
@@ -7,6 +13,7 @@ import pandas as pd
 import csv
 import datetime
 import math
+import time
 
 from datautil.prepare_data import *
 from util.config import img_param_init, set_random_seed
@@ -66,7 +73,6 @@ if __name__ == '__main__':
     # get the true number of clients considering the dropout percentage
     _, args.n_clients = math.modf(args.n_clients * (1 - args.dropout_clients))
     args.n_clients = int(args.n_clients)
-
     args.random_state = np.random.RandomState(1)
     set_random_seed(args.seed)
 
@@ -99,13 +105,13 @@ if __name__ == '__main__':
     exp_folder = f"accuracy_results_{args.alg}_{args.datapercent}_{args.non_iid_alpha}_{args.mu}_{args.iters}_{args.epochs}" + str(
         date)
 
-    # create folder to save n_clients results
-    results_folder = os.path.join(os.path.dirname(__file__), "results/n_data_dist/" + exp_folder)
+    #create folder to save n_clients results
+    results_folder = os.path.join(os.path.dirname(__file__), "results/conv_rate/" + exp_folder)
     os.mkdir(results_folder)
 
     # create a csv (or .txt) file to save the results-file-name for each alg
-    res_files_name = "results/n_data_dist/name_file_res_algos.csv"
-    # res_files_name = "results/n_data_dist/name_file_res_algos.txt"
+    res_files_name = "results/conv_rate/name_file_res_algos.csv"
+    # res_files_name = "results/n_rounds/name_file_res_algos.txt"
 
     # write the file_name into a csv file
     with open(res_files_name, newline='', encoding='utf-8', mode='a+') as fn:
@@ -121,91 +127,115 @@ if __name__ == '__main__':
     #    fn.write(results_folder)
     # fn.close()
 
-    # create a csv file to save accuracy result for each value of the parameter (n_clients)
+    # create a csv file to save accuracy result for each value of the parameter (n_rounds)
     with open(results_folder + "/acc.csv", newline='', encoding='utf-8', mode='w') as f:
-        fieldnames = ['alpha', 'avg-test-accuracy', 'avg-train-loss', 'fairness-var']
+        fieldnames = ['n_rounds', 'avg-test-accuracy', 'avg-train-loss', 'fairness-var', 'num-epochs', 'batch-size', 'time-S', 'convergence-rate']
         csv_writer = csv.DictWriter(f, fieldnames)
         csv_writer.writeheader()
 
-    start_tuning = 0
-    # n_clients = [5,10,15,20]
-    # the number of clients must be <= 10
-    n_data_dist = [0.0, 0.025, 0.01, 0.1,0.2]
+    #list of n_rounds
+    n_rounds = [5, 10, 15, 20]
+    n_epochs = [1, 5]
+    n_batch_size = [16,32]
 
-    test_acc = [0] * args.n_clients
 
-    # loop over the n_data_distribution param and train the model
-    for i in range(start_tuning, len(n_data_dist)):
+    # loop over the n_epochs param
+    for epoch in range(len(n_epochs)):
+        args.epochs = n_epochs[epoch]
+        # loop over n_batch-size parm
+        for batch in  range(len(n_batch_size)):
+            args.batch = n_batch_size[batch]
+            i = 0
+            # loop over the n_rounds param and train the model
+            for i in range(len(n_rounds)):
 
-        best_changed = False
+                best_changed = False
 
-        args.non_iid_alpha = n_data_dist[i]
-        best_acc = [0] * args.n_clients
-        best_tacc = [0] * args.n_clients
-        mean_acc_test = 0
+                args.iters = n_rounds[i]
+                best_acc = [0] * args.n_clients
+                best_tacc = [0] * args.n_clients
+                mean_acc_test = 0
 
-        train_loss = [0] * args.n_clients
-        val_loss = [0] * args.n_clients
-        mean_train_loss = 0
+                train_loss = [0] * args.n_clients
+                val_loss = [0] * args.n_clients
+                mean_train_loss = 0
 
-        start_iter = 0
-        for a_iter in range(start_iter, args.iters):
-            print(f"============ Train round {a_iter} ============")
+                time_consum = [0] * args.iters
+                time_consum_list = [0] * len(n_rounds)
 
-            print('n_client : ', args.n_clients)
-            if args.alg == 'metafed':
-                for c_idx in range(args.n_clients):
-                    print('c_idx : ', c_idx)
-                    algclass.client_train(
-                        c_idx, train_loaders[algclass.csort[c_idx]], a_iter)
-                algclass.update_flag(val_loaders)
-            else:
-                # local client training
-                for epoch in range(args.epochs):
-                    for client_idx in range(args.n_clients):
-                        algclass.client_train(
-                            client_idx, train_loaders[client_idx], a_iter)
+                start_iter = 0
 
-                # server aggregation
-                algclass.server_aggre()
+                for a_iter in range(start_iter, args.iters):
+                    print(f"============ Train round {a_iter} ============")
+                    t0 = time.time()
 
-            best_acc, best_tacc, best_changed, train_loss, val_loss = evalandprint(
-                args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter,
-                best_changed, train_loss, val_loss)
-        if args.alg == 'metafed':
-            print('Personalization stage')
-            for c_idx in range(args.n_clients):
-                algclass.personalization(
-                    c_idx, train_loaders[algclass.csort[c_idx]], val_loaders[algclass.csort[c_idx]])
-            best_acc, best_tacc, best_changed, train_loss, val_loss = evalandprint(
-                args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter,
-                best_changed, train_loss, val_loss)
+                    print('n_client : ', args.n_clients)
+                    if args.alg == 'metafed':
+                        for c_idx in range(args.n_clients):
+                            print('c_idx : ', c_idx)
+                            algclass.client_train(
+                                c_idx, train_loaders[algclass.csort[c_idx]], a_iter)
+                        algclass.update_flag(val_loaders)
+                    else:
+                        # local client training
+                        for epoch in range(args.epochs):
+                            for client_idx in range(args.n_clients):
+                                print('client_idx : ', client_idx)
+                                algclass.client_train(
+                                    client_idx, train_loaders[client_idx], a_iter)
 
-        s = 'Personalized test acc for each client: '
-        for item in best_tacc:
-            s += f'{item:.4f},'
-        mean_acc_test = np.mean(np.array(best_tacc))
-        mean_train_loss = np.mean(np.array(train_loss))
-        # variance of the chosen metric (acc) = fairness of the model
-        fair_var = np.var(np.array(best_tacc)) * 10000
+                        # server aggregation
+                        algclass.server_aggre()
 
-        s += f'\nAverage accuracy: {mean_acc_test:.4f}'
-        print(s)
+                    best_acc, best_tacc, best_changed, train_loss, val_loss = evalandprint(
+                        args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter,
+                        best_changed, train_loss, val_loss)
+                    time_consum[a_iter] = time.time() - t0
 
-        print('my results: ', mean_acc_test)
+                if args.alg == 'metafed':
+                    print('Personalization stage')
+                    for c_idx in range(args.n_clients):
+                        algclass.personalization(
+                            c_idx, train_loaders[algclass.csort[c_idx]], val_loaders[algclass.csort[c_idx]])
+                    best_acc, best_tacc, best_changed, train_loss, val_loss = evalandprint(
+                        args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter,
+                        best_changed, train_loss, val_loss)
 
-        print(' the average of train loss over all clients :', mean_train_loss)
+                    tf = time.time()-t0
+                    time_consum [a_iter] = tf
+                time_consum_list[i] = np.mean(time_consum)
 
-        print(' the average of accuracy variance ==> fairness :', fair_var)
-        # save the accuracy and loss results
-        with open(results_folder + "/acc.csv", newline='', encoding='utf-8', mode='a') as f:
-            csv_writer = csv.DictWriter(f, fieldnames)
-            csv_writer.writerow({'alpha': args.non_iid_alpha, 'avg-test-accuracy': mean_acc_test,
-                                 'avg-train-loss': mean_train_loss,
-                                 'fairness-var': fair_var
-                                 })
+                print('Time average consumption over all clients (computation + communication) :', time_consum_list[i])
+
+                s = 'Personalized test acc for each client: '
+                for item in best_tacc:
+                    s += f'{item:.4f},'
+                mean_acc_test = np.mean(np.array(best_tacc))
+                mean_train_loss = np.mean(np.array(train_loss))
+                # variance of the chosen metric (acc) = fairness of the model
+                fair_var = np.var(np.array(best_tacc)) * 10000
+
+                s += f'\nAverage accuracy: {mean_acc_test:.4f}'
+                print(s)
+
+                print('my results: ', mean_acc_test)
+
+                print(' the average of train loss over all clients :', mean_train_loss)
+
+                print(' the average of accuracy variance ==> fairness :', fair_var)
+
+                # save the accuracy and loss results
+                with open(results_folder + "/acc.csv", newline='', encoding='utf-8', mode='a') as f:
+                    csv_writer = csv.DictWriter(f, fieldnames)
+                    csv_writer.writerow({'n_rounds': args.iters, 'avg-test-accuracy': mean_acc_test, 'avg-train-loss' :mean_train_loss,
+                                         'fairness-var' : fair_var,
+                                         'num-epochs' : args.epochs,
+                                         'batch-size': args.batch,
+                                         'time-S' : time_consum_list[i],
+                                         'convergence-rate': time_consum_list[i]/args.iters })
+                i += 1
 
     #close the results file when the loop is over
     f.close()
 
-# run : python main_n_clients.py --alg fedavg --dataset medmnist --iters 3 --epochs 1 --non_iid_alpha 0.1
+# run : python main_n_rounds.py --alg fedavg --dataset medmnist  --wk_iters 1 --non_iid_alpha 0.1

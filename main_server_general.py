@@ -32,6 +32,7 @@ if __name__ == '__main__':
                         default='./cks/', help='path to save the checkpoint')
     parser.add_argument('--device', type=str,
                         default='cuda', help='[cuda | cpu]')
+    parser.add_argument('--epochs', type=int, default=1, help='number of epochs')
     parser.add_argument('--batch', type=int, default=32, help='batch size')
     parser.add_argument('--iters', type=int, default=10,
                         help='iterations for communication')
@@ -49,8 +50,6 @@ if __name__ == '__main__':
     parser.add_argument('--pretrained_iters', type=int,
                         default=150, help='iterations for pretrained models')
     parser.add_argument('--seed', type=int, default=0, help='random seed')
-    parser.add_argument('--wk_iters', type=int, default=1,
-                        help='optimization iters in local worker between communication')
     parser.add_argument('--nosharebn', action='store_true',
                         help='not share bn')
 
@@ -74,7 +73,7 @@ if __name__ == '__main__':
     set_random_seed(args.seed)
 
     # create folder to save checkpoints
-    exp_folder = f'fed_{args.dataset}_{args.alg}_{args.datapercent}_{args.non_iid_alpha}_{args.mu}_{args.model_momentum}_{args.plan}_{args.lam}_{args.threshold}_{args.iters}_{args.wk_iters}'
+    exp_folder = f'fed_{args.dataset}_{args.alg}_{args.datapercent}_{args.non_iid_alpha}_{args.mu}_{args.model_momentum}_{args.plan}_{args.lam}_{args.threshold}_{args.iters}_{args.epochs}'
     if args.nosharebn:
         exp_folder += '_nosharebn'
     args.save_path = os.path.join(args.save_path, exp_folder)
@@ -99,7 +98,7 @@ if __name__ == '__main__':
     # store results
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-    exp_folder = f"accuracy_results_{args.alg}_{args.datapercent}_{args.non_iid_alpha}_{args.mu}_{args.iters}_{args.wk_iters}" + str(
+    exp_folder = f"accuracy_results_{args.alg}_{args.datapercent}_{args.non_iid_alpha}_{args.mu}_{args.iters}_{args.epochs}" + str(
         date)
 
     # create folder to save n_clients results
@@ -172,9 +171,8 @@ if __name__ == '__main__':
                 algclass.update_flag(val_loaders)
             else:
                 # local client training
-                for wi in range(args.wk_iters):
+                for epoch in range(args.epochs):
                     for client_idx in range(args.n_clients):
-                        print('client_idx : ', client_idx)
                         algclass.client_train(
                             client_idx, train_loaders[client_idx], a_iter)
 
@@ -238,4 +236,4 @@ if __name__ == '__main__':
     # close the results file when the loop is over
     f.close()
 
-# run : python main_n_clients.py --alg fedavg --dataset medmnist --iters 3 --wk_iters 1 --non_iid_alpha 0.1
+# run : python main_n_clients.py --alg fedavg --dataset medmnist --iters 3 --epochs 1 --non_iid_alpha 0.1
