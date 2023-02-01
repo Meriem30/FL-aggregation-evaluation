@@ -71,7 +71,7 @@ class metafed(torch.nn.Module):
             client_idx], dataloader, self.optimizers[client_idx], self.client_model[tidx]
         if round == 0 and c_idx == 0:
             tmodel = None
-        for _ in range(self.args.wk_iters):
+        for _ in range(self.args.epochs):
             train_loss, train_acc = trainwithteacher(
                 model, train_loader, optimizer, self.loss_fun, self.args.device, tmodel, self.args.lam, self.args, self.flagl[client_idx])
         return train_loss, train_acc
@@ -90,7 +90,7 @@ class metafed(torch.nn.Module):
         else:
             lam = (10**(min(1, (v2a-v1a)*5)))/10*self.args.lam
 
-        for _ in range(self.args.wk_iters):
+        for _ in range(self.args.epochs):
             train_loss, train_acc = trainwithteacher(
                 model, train_loader, optimizer, self.loss_fun, self.args.device, tmodel, lam, self.args, self.flagl[client_idx])
         return train_loss, train_acc

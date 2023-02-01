@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Dec 10 08:11:16 2022
 
-@author: TOSHIBA-Portégé C30
-"""
 from matplotlib import pyplot as plt
 
 import pandas as pd
@@ -21,7 +16,7 @@ def plotOneAlg(file_name, metric,marker,label,ax ):
         plt.ylabel('Average Test Accuracy')
     elif metric == 'loss':
         ax.plot(nb_rounds, train_loss, marker=marker, label=label)
-        plt.xlabel('Epochs')
+        plt.xlabel('Number of Iterations')
         plt.ylabel('Loss')
     plt.legend()
 
@@ -41,7 +36,7 @@ def plotResults(files, algos, num_algs):
     for i in range(num_algs):
         metric = 'loss'
         plotOneAlg(files[i],metric,marker[i],labels[i],ax2)
-        fig.savefig(files[num_algs-1] + '/n_epochs_avg_loss.png', bbox_inches='tight')
+        fig.savefig(files[num_algs-1] + '/n_rounds_avg_loss.png', bbox_inches='tight')
 
 if __name__ == '__main__':
     lines = 0

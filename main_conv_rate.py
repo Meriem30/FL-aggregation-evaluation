@@ -238,4 +238,4 @@ if __name__ == '__main__':
     #close the results file when the loop is over
     f.close()
 
-# run : python main_n_rounds.py --alg fedavg --dataset medmnist  --wk_iters 1 --non_iid_alpha 0.1
+# run : python main_n_rounds.py --alg fedavg --dataset medmnist  --epochs 1 --non_iid_alpha 0.1
