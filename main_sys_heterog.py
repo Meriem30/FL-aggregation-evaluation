@@ -159,18 +159,27 @@ if __name__ == '__main__':
             for a_iter in range(start_iter, args.iters):
                 print(f"============ Train round {a_iter} ============")
 
-                print('n_client : ', args.n_clients)
+                print('n_clients: ', args.n_clients)
+                x = random.randint(1, args.epochs)
+                print(x)
+                normal_wl = int(args.n_clients * (1 - args.het_level))
+                partial_wk = args.n_clients - normal_wl
                 if args.alg == 'metafed':
-                    for c_idx in range(args.n_clients):
-                        print('c_idx : ', c_idx)
-                        algclass.client_train(
-                            c_idx, train_loaders[algclass.csort[c_idx]], a_iter)
+                    # local client training for normal worker
+                    for epochs in range(args.epochs):
+                        for client_idx in range(normal_wl):
+                            algclass.client_train(
+                                client_idx, train_loaders[algclass.csort[client_idx]], a_iter)
+                    # local training for worker with system constraint
+                    for epochs in range(partial_wk):
+                        args.epochs = x
+                        for client_idx in range(normal_wl, args.n_clients):
+                            algclass.client_train(
+                                client_idx, train_loaders[algclass.csort[client_idx]], a_iter)
+
                     algclass.update_flag(val_loaders)
                 else:
-                    x = random.randint(1, args.epochs)
-                    print(x)
-                    normal_wl = int(args.n_clients * (1 - args.het_level))
-                    partial_wk = args.n_clients - normal_wl
+
                     # local client training for normal worker
                     for epochs in range(args.epochs):
                         for client_idx in range(normal_wl):

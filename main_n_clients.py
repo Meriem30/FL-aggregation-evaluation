@@ -8,6 +8,7 @@ import pandas as pd
 import csv
 import datetime
 import math
+import time
 
 from datautil.prepare_data import *
 from util.config import img_param_init, set_random_seed
@@ -17,6 +18,9 @@ from alg import algs
 from n_clients_plot_acc import plotResults
 
 if __name__ == '__main__':
+    t0 = time.time()
+    print('the time now is : ')
+    print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--alg', type=str, default='fedavg',
@@ -131,7 +135,7 @@ if __name__ == '__main__':
     start_tuning = 0
     # n_clients = [5,10,15,20]
     # the number of clients must be <= 10
-    n_clients = [3, 5, 7, 10]
+    n_clients = [2, 5, 8, 10]
 
     test_acc = [0] * args.n_clients
 
@@ -152,11 +156,9 @@ if __name__ == '__main__':
         start_iter = 0
         for a_iter in range(start_iter, args.iters):
             print(f"============ Train round {a_iter} ============")
-
-            print('n_client : ', args.n_clients)
+            print('n_clients: ', args.n_clients)
             if args.alg == 'metafed':
                 for c_idx in range(args.n_clients):
-                    print('c_idx : ', c_idx)
                     algclass.client_train(
                         c_idx, train_loaders[algclass.csort[c_idx]], a_iter)
                 algclass.update_flag(val_loaders)
@@ -209,7 +211,10 @@ if __name__ == '__main__':
 
     # close the results file when the loop is over
     f.close()
-
+    tf = (time.time() - t0 ) / 60
+    print('the time now is : ')
+    print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    print('the execution takes (min.) ', tf)
 # run : python main_n_clients.py --alg fedavg --dataset medmnist --iters 3 --epochs 1 --non_iid_alpha 0.1
 
 

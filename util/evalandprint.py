@@ -35,7 +35,6 @@ def evalandprint(args, algclass, train_loaders, val_loaders, test_loaders, SAVE_
     val_loss = val_loss_list
 
     if np.mean(val_acc_list) > np.mean(best_acc):
-        print('len after mean ', val_acc_list)
         for client_idx in range(args.n_clients):
             best_acc[client_idx] = val_acc_list[client_idx]
             best_epoch = a_iter
@@ -51,16 +50,16 @@ def evalandprint(args, algclass, train_loaders, val_loaders, test_loaders, SAVE_
             best_tacc[client_idx] = test_acc
 
 
-        print('Saving the local and server checkpoint to {}'.format(SAVE_PATH))
+        #print('Saving the local and server checkpoint to {}'.format(SAVE_PATH))
         tosave = {'best_epoch': best_epoch, 'best_acc': best_acc, 'best_tacc': np.mean(np.array(best_tacc))}
         #for i,tmodel in enumerate(algclass.client_model):
          #   tosave['client_model_'+str(i)]=tmodel.state_dict()
             #print(tmodel.state_dict())
         #tosave['server_model']=algclass.server_model.state_dict()
         # Print server model's state_dict
-        print("Model's state_dict:")
-        for param_tensor in algclass.server_model.state_dict():
-            print(param_tensor, "\t", algclass.server_model.state_dict()[param_tensor].size())
+        #print("Model's state_dict:")
+        #for param_tensor in algclass.server_model.state_dict():
+        #    print(param_tensor, "\t", algclass.server_model.state_dict()[param_tensor].size())
             
         torch.save(tosave, SAVE_PATH)
 

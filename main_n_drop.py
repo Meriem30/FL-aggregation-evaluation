@@ -153,11 +153,11 @@ if __name__ == '__main__':
         for a_iter in range(start_iter, args.iters):
             print(f"============ Train round {a_iter} ============")
 
-            print('n_client : ', args.n_clients)
+            print('n_clients: ', args.n_clients)
             if args.alg == 'metafed':
                 for epoch in range(args.epochs):
                     for c_idx in range(args.n_clients):
-                        print('c_idx : ', c_idx)
+                        
                         algclass.client_train(
                             c_idx, train_loaders[algclass.csort[c_idx]], a_iter)
                     algclass.update_flag(val_loaders)
