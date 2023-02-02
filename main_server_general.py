@@ -8,6 +8,8 @@ import pandas as pd
 import csv
 import datetime
 import math
+import time
+
 
 from datautil.prepare_data import *
 from util.config import img_param_init, set_random_seed
@@ -18,12 +20,15 @@ from alg import algs
 from n_clients_plot_acc import plotResults
 
 if __name__ == '__main__':
+    t0 = time.time()
+    print('the time now is : ')
+    print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--alg', type=str, default='fedavg',
                         help='Algorithm to choose: [base | fedavg | fedbn | fedprox | fedap | metafed ]')
     parser.add_argument('--datapercent', type=float,
-                        default=0.1, help='data percent to use')
+                        default=1, help='data percent to use')
     parser.add_argument('--dataset', type=str, default='medmnist',
                         help='[ medmnist ]')
     parser.add_argument('--root_dir', type=str,
@@ -161,11 +166,11 @@ if __name__ == '__main__':
         start_iter = 0
         for a_iter in range(start_iter, args.iters):
             print(f"============ Train round {a_iter} ============")
-
             print('n_clients: ', args.n_clients)
+            print('the algo in execution : ', args.alg)
+            print('the param : Server Generalisation')
             if args.alg == 'metafed':
                 for c_idx in range(args.n_clients):
-                    
                     algclass.client_train(
                         c_idx, train_loaders[algclass.csort[c_idx]], a_iter)
                 algclass.update_flag(val_loaders)
@@ -236,4 +241,6 @@ if __name__ == '__main__':
     # close the results file when the loop is over
     f.close()
 
-# run : python main_n_clients.py --alg fedavg --dataset medmnist --iters 3 --epochs 1 --non_iid_alpha 0.1
+    t0 = time.time()
+    print('the time now is : ')
+    print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))

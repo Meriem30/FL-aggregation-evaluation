@@ -23,6 +23,9 @@ from alg import algs
 from n_clients_plot_acc import plotResults
 
 if __name__ == '__main__':
+    t1 = time.time()
+    print('the time now is : ')
+    print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--alg', type=str, default='fedavg',
@@ -168,11 +171,11 @@ if __name__ == '__main__':
                 for a_iter in range(start_iter, args.iters):
                     print(f"============ Train round {a_iter} ============")
                     t0 = time.time()
-
                     print('n_clients: ', args.n_clients)
+                    print('the algo in execution:', args.alg)
+                    print('the param : convergence rate')
                     if args.alg == 'metafed':
                         for c_idx in range(args.n_clients):
-                            
                             algclass.client_train(
                                 c_idx, train_loaders[algclass.csort[c_idx]], a_iter)
                         algclass.update_flag(val_loaders)
@@ -237,5 +240,9 @@ if __name__ == '__main__':
 
     #close the results file when the loop is over
     f.close()
+    tfin = (time.time() -t1) / 60
+    print('the time now is : ')
+    print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    print('the execution takes (min.) ', tfin)
 
 # run : python main_n_rounds.py --alg fedavg --dataset medmnist  --epochs 1 --non_iid_alpha 0.1

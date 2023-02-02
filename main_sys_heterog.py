@@ -9,6 +9,7 @@ import csv
 import datetime
 import math
 import random
+import time
 
 from datautil.prepare_data import *
 from util.config import img_param_init, set_random_seed
@@ -18,6 +19,9 @@ from alg import algs
 from n_clients_plot_acc import plotResults
 
 if __name__ == '__main__':
+    t0 = time.time()
+    print('the time now is : ')
+    print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--alg', type=str, default='fedavg',
@@ -132,10 +136,9 @@ if __name__ == '__main__':
         csv_writer.writeheader()
 
     start_tuning = 0
-    # n_clients = [5,10,15,20]
-    # the number of clients must be <= 10
+
     n_het_level = [0.0, 0.1, 0.5, 0.9]
-    n_epochs = [1,2]
+    n_epochs = [1,5]
 
     test_acc = [0] * args.n_clients
     j = 0
@@ -160,6 +163,8 @@ if __name__ == '__main__':
                 print(f"============ Train round {a_iter} ============")
 
                 print('n_clients: ', args.n_clients)
+                print('the algo in execution : ', args.alg)
+                print('the param: System Heterogeneity')
                 x = random.randint(1, args.epochs)
                 print(x)
                 normal_wl = int(args.n_clients * (1 - args.het_level))
@@ -236,8 +241,11 @@ if __name__ == '__main__':
 
         # close the results file when the loop is over
         f.close()
+        tf = (time.time() - t0) / 60
+        print('the time now is : ')
+        print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+        print('the execution takes (min.) ', tf)
 
-# run : python main_n_clients.py --alg fedavg --dataset medmnist --iters 3 --epochs 1 --non_iid_alpha 0.1
 
 
 

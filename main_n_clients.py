@@ -213,10 +213,7 @@ if __name__ == '__main__':
 
     # close the results file when the loop is over
     f.close()
-    tf = (time.time() - t0 ) / 60
-    print('the time now is : ')
-    print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-    print('the execution takes (min.) ', tf)
+    cc
 
 # run : python main_n_clients.py --alg fedavg --dataset medmnist --iters 3 --epochs 1 --non_iid_alpha 0.1
 
