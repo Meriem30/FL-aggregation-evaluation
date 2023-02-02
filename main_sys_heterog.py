@@ -127,104 +127,106 @@ if __name__ == '__main__':
 
     # create a csv file to save accuracy result for each value of the parameter (n_clients)
     with open(results_folder + "/acc.csv", newline='', encoding='utf-8', mode='w') as f:
-        fieldnames = ['het-level', 'avg-test-accuracy', 'avg-train-loss', 'fairness-var', 'epoch']
+        fieldnames = ['n-level', 'origin-epoch', 'rand-epoch','avg-test-accuracy', 'avg-train-loss', 'fairness-var', ]
         csv_writer = csv.DictWriter(f, fieldnames)
         csv_writer.writeheader()
 
     start_tuning = 0
     # n_clients = [5,10,15,20]
     # the number of clients must be <= 10
-    n_het_level = [0, 0.1, 0.5, 0.9]
-    n_epochs = [1]
+    n_het_level = [0.0, 0.1, 0.5, 0.9]
+    n_epochs = [1,2]
 
     test_acc = [0] * args.n_clients
     j = 0
-    # loop over the n_clients param and train the model
-    for i in range(start_tuning, len(n_het_level)):
-        args.epochs = n_epochs[j]
+    for j in range(len(n_epochs)):
+        # loop over the n_clients param and train the model
+        for i in range(start_tuning, len(n_het_level)):
+            args.epochs = n_epochs[j]
 
-        best_changed = False
+            best_changed = False
 
-        args.het_level = n_het_level[i]
-        best_acc = [0] * args.n_clients
-        best_tacc = [0] * args.n_clients
-        mean_acc_test = 0
+            args.het_level = n_het_level[i]
+            best_acc = [0] * args.n_clients
+            best_tacc = [0] * args.n_clients
+            mean_acc_test = 0
 
-        train_loss = [0] * args.n_clients
-        val_loss = [0] * args.n_clients
-        mean_train_loss = 0
+            train_loss = [0] * args.n_clients
+            val_loss = [0] * args.n_clients
+            mean_train_loss = 0
 
-        start_iter = 0
-        for a_iter in range(start_iter, args.iters):
-            print(f"============ Train round {a_iter} ============")
+            start_iter = 0
+            for a_iter in range(start_iter, args.iters):
+                print(f"============ Train round {a_iter} ============")
 
-            print('n_client : ', args.n_clients)
+                print('n_client : ', args.n_clients)
+                if args.alg == 'metafed':
+                    for c_idx in range(args.n_clients):
+                        print('c_idx : ', c_idx)
+                        algclass.client_train(
+                            c_idx, train_loaders[algclass.csort[c_idx]], a_iter)
+                    algclass.update_flag(val_loaders)
+                else:
+                    x = random.randint(1, args.epochs)
+                    print(x)
+                    normal_wl = int(args.n_clients * (1 - args.het_level))
+                    partial_wk = args.n_clients - normal_wl
+                    # local client training for normal worker
+                    for epochs in range(args.epochs):
+                        for client_idx in range(normal_wl):
+                            algclass.client_train(
+                                client_idx, train_loaders[client_idx], a_iter)
+                    #local training for worker with system constraint
+                    for epochs in range(partial_wk):
+                        args.epochs = x
+                        for client_idx in range(normal_wl, args.n_clients):
+                            algclass.client_train(
+                                client_idx, train_loaders[client_idx], a_iter)
+
+                    # server aggregation
+                    algclass.server_aggre()
+
+                best_acc, best_tacc, best_changed, train_loss, val_loss = evalandprint(
+                    args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter,
+                    best_changed, train_loss, val_loss)
             if args.alg == 'metafed':
+                print('Personalization stage')
                 for c_idx in range(args.n_clients):
-                    print('c_idx : ', c_idx)
-                    algclass.client_train(
-                        c_idx, train_loaders[algclass.csort[c_idx]], a_iter)
-                algclass.update_flag(val_loaders)
-            else:
-                x = random.randint(1, args.epochs)
-                print(x)
-                normal_wl = int(args.n_clients * (1 - args.het_level))
-                partial_wk = args.n_clients - normal_wl
-                # local client training for normal worker
-                for epochs in range(args.epochs):
-                    for client_idx in range(normal_wl):
-                        algclass.client_train(
-                            client_idx, train_loaders[client_idx], a_iter)
-                #local training for worker with system constraint
-                for epochs in range(partial_wk):
-                    args.epochs = x
-                    for client_idx in range(normal_wl, args.n_clients):
-                        algclass.client_train(
-                            client_idx, train_loaders[client_idx], a_iter)
+                    algclass.personalization(
+                        c_idx, train_loaders[algclass.csort[c_idx]], val_loaders[algclass.csort[c_idx]])
+                best_acc, best_tacc, best_changed, train_loss, val_loss = evalandprint(
+                    args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter,
+                    best_changed, train_loss, val_loss)
 
-                # server aggregation
-                algclass.server_aggre()
+            s = 'Personalized test acc for each client: '
+            for item in best_tacc:
+                s += f'{item:.4f},'
+            mean_acc_test = np.mean(np.array(best_tacc))
+            mean_train_loss = np.mean(np.array(train_loss))
+            # variance of the chosen metric (acc) = fairness of the model
+            fair_var = np.var(np.array(best_tacc)) * 10000
 
-            best_acc, best_tacc, best_changed, train_loss, val_loss = evalandprint(
-                args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter,
-                best_changed, train_loss, val_loss)
-        if args.alg == 'metafed':
-            print('Personalization stage')
-            for c_idx in range(args.n_clients):
-                algclass.personalization(
-                    c_idx, train_loaders[algclass.csort[c_idx]], val_loaders[algclass.csort[c_idx]])
-            best_acc, best_tacc, best_changed, train_loss, val_loss = evalandprint(
-                args, algclass, train_loaders, val_loaders, test_loaders, SAVE_PATH, best_acc, best_tacc, a_iter,
-                best_changed, train_loss, val_loss)
+            s += f'\nAverage accuracy: {mean_acc_test:.4f}'
+            print(s)
 
-        s = 'Personalized test acc for each client: '
-        for item in best_tacc:
-            s += f'{item:.4f},'
-        mean_acc_test = np.mean(np.array(best_tacc))
-        mean_train_loss = np.mean(np.array(train_loss))
-        # variance of the chosen metric (acc) = fairness of the model
-        fair_var = np.var(np.array(best_tacc)) * 10000
+            print('my results: ', mean_acc_test)
 
-        s += f'\nAverage accuracy: {mean_acc_test:.4f}'
-        print(s)
+            print(' the average of train loss over all clients :', mean_train_loss)
 
-        print('my results: ', mean_acc_test)
+            print(' the average of accuracy variance ==> fairness :', fair_var)
+            # save the accuracy and loss results
+            with open(results_folder + "/acc.csv", newline='', encoding='utf-8', mode='a') as f:
+                csv_writer = csv.DictWriter(f, fieldnames)
+                csv_writer.writerow({'n-level': args.het_level,
+                                     'origin-epoch' : n_epochs[j],
+                                     'rand-epoch' : x ,
+                                     'avg-test-accuracy': mean_acc_test,
+                                     'avg-train-loss': mean_train_loss,
+                                     'fairness-var': fair_var
+                                     })
 
-        print(' the average of train loss over all clients :', mean_train_loss)
-
-        print(' the average of accuracy variance ==> fairness :', fair_var)
-        # save the accuracy and loss results
-        with open(results_folder + "/acc.csv", newline='', encoding='utf-8', mode='a') as f:
-            csv_writer = csv.DictWriter(f, fieldnames)
-            csv_writer.writerow({'het-level': args.het_level,
-                                 'epoch' : n_epochs[j],
-                                 'avg-test-accuracy': mean_acc_test,
-                                 'avg-train-loss': mean_train_loss,
-                                 'fairness-var': fair_var
-                                 })
-
-    # close the results file when the loop is over
-    f.close()
+        # close the results file when the loop is over
+        f.close()
 
 # run : python main_n_clients.py --alg fedavg --dataset medmnist --iters 3 --epochs 1 --non_iid_alpha 0.1
 
