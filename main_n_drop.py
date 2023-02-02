@@ -13,6 +13,7 @@ import pandas as pd
 import csv
 import datetime
 import math
+import time
 
 from datautil.prepare_data import *
 from util.config import img_param_init, set_random_seed
@@ -22,6 +23,9 @@ from alg import algs
 from n_clients_plot_acc import plotResults
 
 if __name__ == '__main__':
+    t0 = time.time()
+    print('the time now is : ')
+    print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--alg', type=str, default='fedavg',
@@ -133,7 +137,7 @@ if __name__ == '__main__':
         csv_writer.writeheader()
 
     #list of dropout percentage values
-    n_droup = [0, 0.1, 0.2, 0.5]
+    n_droup = [0, 0.1, 0.2, 0.5, 0.7,0.9]
 
     # loop over the n_rounds param and train the model
     for i in range(len(n_droup)):
@@ -154,10 +158,12 @@ if __name__ == '__main__':
             print(f"============ Train round {a_iter} ============")
 
             print('n_clients: ', args.n_clients)
+            print('the algo in execution : ', args.alg)
+            print('param : the drop-out clients')
+
             if args.alg == 'metafed':
                 for epoch in range(args.epochs):
                     for c_idx in range(args.n_clients):
-                        
                         algclass.client_train(
                             c_idx, train_loaders[algclass.csort[c_idx]], a_iter)
                     algclass.update_flag(val_loaders)
@@ -209,3 +215,7 @@ if __name__ == '__main__':
 
     #close the results file when the loop is over
     f.close()
+    tf = (time.time() - t0) / 60
+    print('the time now is : ')
+    print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    print('the execution takes (min.) ', tf)

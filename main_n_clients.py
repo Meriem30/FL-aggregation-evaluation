@@ -157,6 +157,8 @@ if __name__ == '__main__':
         for a_iter in range(start_iter, args.iters):
             print(f"============ Train round {a_iter} ============")
             print('n_clients: ', args.n_clients)
+            print('the algo in execution : ', args.alg)
+
             if args.alg == 'metafed':
                 for c_idx in range(args.n_clients):
                     algclass.client_train(
@@ -215,6 +217,7 @@ if __name__ == '__main__':
     print('the time now is : ')
     print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
     print('the execution takes (min.) ', tf)
+
 # run : python main_n_clients.py --alg fedavg --dataset medmnist --iters 3 --epochs 1 --non_iid_alpha 0.1
 
 

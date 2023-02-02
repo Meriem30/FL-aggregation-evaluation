@@ -13,6 +13,7 @@ import pandas as pd
 import csv
 import datetime
 import math
+import time
 
 from datautil.prepare_data import *
 from util.config import img_param_init, set_random_seed
@@ -22,6 +23,9 @@ from alg import algs
 from n_clients_plot_acc import plotResults
 
 if __name__ == '__main__':
+    t0 = time.time()
+    print('the time now is : ')
+    print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--alg', type=str, default='fedavg',
@@ -133,7 +137,7 @@ if __name__ == '__main__':
         csv_writer.writeheader()
 
     #list of n_rounds
-    n_rounds = [5, 10, 15, 20]
+    n_rounds = [100, 200, 300, 500, 800, 1000]
 
     # loop over the n_rounds param and train the model
     for i in range(len(n_rounds)):
@@ -154,9 +158,9 @@ if __name__ == '__main__':
             print(f"============ Train round {a_iter} ============")
 
             print('n_clients: ', args.n_clients)
+            print('the algo  in execution: ', args.alg)
             if args.alg == 'metafed':
                 for c_idx in range(args.n_clients):
-                    
                     algclass.client_train(
                         c_idx, train_loaders[algclass.csort[c_idx]], a_iter)
                 algclass.update_flag(val_loaders)
@@ -164,7 +168,6 @@ if __name__ == '__main__':
                 # local client training
                 for epoch in range(args.epochs):
                     for client_idx in range(args.n_clients):
-                        print('client_idx : ', client_idx)
                         algclass.client_train(
                             client_idx, train_loaders[client_idx], a_iter)
 
@@ -209,5 +212,9 @@ if __name__ == '__main__':
 
     #close the results file when the loop is over
     f.close()
+    tf = (time.time() - t0) / 60
+    print('the time now is : ')
+    print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    print('the execution takes (min.) ', tf)
 
 # run : python main_n_rounds.py --alg fedavg --dataset medmnist  --epochs 1 --non_iid_alpha 0.1
