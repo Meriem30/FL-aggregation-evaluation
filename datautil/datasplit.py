@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Nov 17 14:28:15 2022
 
-@author: TOSHIBA-Portégé C30
-"""
 
 import numpy as np
 import torch
@@ -335,7 +330,7 @@ def define_pretrain_dataset(conf, train_dataset):
         conf,
         train_dataset,
         partition_sizes,
-        partition_type="evenly",
+        partition_type="non_iid_dirichlet",
         #consistent_indices=False,
     )
     return data_partitioner.use(0)

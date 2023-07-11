@@ -39,7 +39,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_path', type=str,
                         default='./cks/', help='path to save the checkpoint')
     parser.add_argument('--device', type=str,
-                        default='cuda', help='[cuda | cpu]')
+                        default='cpu', help='[cuda | cpu]')
     parser.add_argument('--epochs', type=int, default=1, help='number of epochs')
     parser.add_argument('--batch', type=int, default=32, help='batch size')
     parser.add_argument('--iters', type=int, default=10,
@@ -60,7 +60,27 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     parser.add_argument('--nosharebn', action='store_true',
                         help='not share bn')
+    parser.add_argument('--diralpha', type=float,
+                        default=0.3, help='parameter for Dirichlet distribution')
+    parser.add_argument('--preprocess', type=bool,
+                        default=True, help='parameter dataset preprocess')
+    parser.add_argument('--download', type=bool,
+                        default=True, help='parameter for download dataset ')
+    parser.add_argument('--num_shards', type=int,
+                        default=None, help=' Number of shards in non-iid ``"shards"`` partition. Only works if ``partition=shards')
+    parser.add_argument('--verbose', type=bool,
+                        default=True,
+                        help='Whether to print partition process')
+    parser.add_argument('--min_require_size', type=int,
+                        default=None,
+                        help='Minimum required sample number for each client. If set to ``None``, then equals to ``num_classes``. Only works if ``partition="noniid-labeldir"``')
 
+    parser.add_argument('--unbalance_sgm', type=float,
+                        default=0.0,
+                        help='Log-normal distribution variance for unbalanced data partition over clients. Default as ``0`` for balanced partition.')
+    parser.add_argument('--balance', type=bool,
+                        default=True,
+                        help='Balanced partition over all clients or not')
     # algorithm-specific parameters
     parser.add_argument('--mu', type=float, default=1e-3,
                         help='The hyper parameter for fedprox')
@@ -70,7 +90,14 @@ if __name__ == '__main__':
                         help='init lam, hyperparmeter for metafed')
     parser.add_argument('--model_momentum', type=float,
                         default=0.5, help='hyperparameter for fedap')
+    parser.add_argument('--d', type=int,
+                        default=2, help='number of clients to be selected for powerofchoice')
+
+    parser.add_argument('--alpha', type=float,
+                        default=1e-2, help='regularization parameter for feddyn')
+
     # parse to extract arguments
+
     args = parser.parse_args()
 
     # get the true number of clients considering the dropout percentage
@@ -90,6 +117,9 @@ if __name__ == '__main__':
 
     # get the prepared dataset
     train_loaders, val_loaders, test_loaders = get_data(args.dataset)(args)
+    print('train_loaders', len(train_loaders[0]))
+    print('val_loaders', len(val_loaders[0]))
+    print('test_loaders', len(test_loaders[0]))
 
     # get the class of the specified alg
     algclass = algs.get_algorithm_class(args.alg)(args)
@@ -101,7 +131,8 @@ if __name__ == '__main__':
         algclass.init_model_flag(train_loaders, val_loaders)
         args.iters = args.iters - 1
         print('Common knowledge accumulation stage')
-
+    elif args.alg == 'powerofchoice':
+        args.list_selected_clients = list(range(args.n_clients))
     # store results
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -137,9 +168,9 @@ if __name__ == '__main__':
         csv_writer.writeheader()
 
     #list of n_rounds
-    n_rounds = [5, 10, 15, 20]
-    n_epochs = [1, 5]
-    n_batch_size = [16,32]
+    n_rounds = [100, 200, 300, 400,500,600]
+    n_epochs = [1,3,5]
+    n_batch_size = [16,32,64]
 
 
     # loop over the n_epochs param
@@ -173,7 +204,7 @@ if __name__ == '__main__':
                     t0 = time.time()
                     print('n_clients: ', args.n_clients)
                     print('the algo in execution:', args.alg)
-                    print('the param : convergence rate')
+                    print(f'convergence rate: rounds {args.iters}; epochs {args.epochs}; batch {args.batch} ')
                     if args.alg == 'metafed':
                         for c_idx in range(args.n_clients):
                             algclass.client_train(
@@ -183,7 +214,6 @@ if __name__ == '__main__':
                         # local client training
                         for epoch in range(args.epochs):
                             for client_idx in range(args.n_clients):
-                                print('client_idx : ', client_idx)
                                 algclass.client_train(
                                     client_idx, train_loaders[client_idx], a_iter)
 

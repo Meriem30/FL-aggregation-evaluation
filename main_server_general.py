@@ -37,9 +37,9 @@ if __name__ == '__main__':
                         default='./cks/', help='path to save the checkpoint')
     parser.add_argument('--device', type=str,
                         default='cuda', help='[cuda | cpu]')
-    parser.add_argument('--epochs', type=int, default=1, help='number of epochs')
+    parser.add_argument('--epochs', type=int, default=5, help='number of epochs')
     parser.add_argument('--batch', type=int, default=32, help='batch size')
-    parser.add_argument('--iters', type=int, default=10,
+    parser.add_argument('--iters', type=int, default=300,
                         help='iterations for communication')
     parser.add_argument('--lr', type=float, default=1e-2, help='learning rate')
     parser.add_argument('--n_clients', type=int,
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     parser.add_argument('--dropout_clients', type=int,
                         default=0, help='client dropout percentage')
     parser.add_argument('--non_iid_alpha', type=float,
-                        default=0.1, help='data split for label shift')
+                        default=0.4, help='data split for label shift')
     parser.add_argument('--partition_data', type=str,
                         default='non_iid_dirichlet', help='partition data way')
     parser.add_argument('--plan', type=int,
@@ -57,7 +57,27 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     parser.add_argument('--nosharebn', action='store_true',
                         help='not share bn')
+    parser.add_argument('--diralpha', type=float,
+                        default=0.3, help='parameter for Dirichlet distribution')
+    parser.add_argument('--preprocess', type=bool,
+                        default=True, help='parameter dataset preprocess')
+    parser.add_argument('--download', type=bool,
+                        default=True, help='parameter for download dataset ')
+    parser.add_argument('--num_shards', type=int,
+                        default=None, help=' Number of shards in non-iid ``"shards"`` partition. Only works if ``partition=shards')
+    parser.add_argument('--verbose', type=bool,
+                        default=True,
+                        help='Whether to print partition process')
+    parser.add_argument('--min_require_size', type=int,
+                        default=None,
+                        help='Minimum required sample number for each client. If set to ``None``, then equals to ``num_classes``. Only works if ``partition="noniid-labeldir"``')
 
+    parser.add_argument('--unbalance_sgm', type=float,
+                        default=0.0,
+                        help='Log-normal distribution variance for unbalanced data partition over clients. Default as ``0`` for balanced partition.')
+    parser.add_argument('--balance', type=bool,
+                        default=True,
+                        help='Balanced partition over all clients or not')
     # algorithm-specific parameters
     parser.add_argument('--mu', type=float, default=1e-3,
                         help='The hyper parameter for fedprox')
@@ -67,7 +87,14 @@ if __name__ == '__main__':
                         help='init lam, hyperparmeter for metafed')
     parser.add_argument('--model_momentum', type=float,
                         default=0.5, help='hyperparameter for fedap')
+    parser.add_argument('--d', type=int,
+                        default=2, help='number of clients to be selected for powerofchoice')
+
+    parser.add_argument('--alpha', type=float,
+                        default=1e-2, help='regularization parameter for feddyn')
+
     # parse to extract arguments
+
     args = parser.parse_args()
 
     # get the true number of clients considering the dropout percentage
@@ -88,6 +115,9 @@ if __name__ == '__main__':
 
     # get the prepared dataset
     train_loaders, val_loaders, test_loaders = get_data(args.dataset)(args)
+    print('train_loaders', len(train_loaders[0]))
+    print('val_loaders', len(val_loaders[0]))
+    print('test_loaders', len(test_loaders[0]))
 
     # get the class of the specified alg
     algclass = algs.get_algorithm_class(args.alg)(args)
@@ -99,6 +129,8 @@ if __name__ == '__main__':
         algclass.init_model_flag(train_loaders, val_loaders)
         args.iters = args.iters - 1
         print('Common knowledge accumulation stage')
+    elif args.alg == 'powerofchoice':
+        args.list_selected_clients = list(range(args.n_clients))
 
     # store results
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -106,7 +138,7 @@ if __name__ == '__main__':
     exp_folder = f"accuracy_results_{args.alg}_{args.datapercent}_{args.non_iid_alpha}_{args.mu}_{args.iters}_{args.epochs}" + str(
         date)
 
-    # create folder to save n_clients results
+    # create folder to save results
     results_folder = os.path.join(os.path.dirname(__file__), "results/server_general/" + exp_folder)
     os.mkdir(results_folder)
 
@@ -137,7 +169,7 @@ if __name__ == '__main__':
     start_tuning = 0
     # n_clients = [5,10,15,20]
     # the number of clients must be <= 10
-    n_clients = [3, 5, 7, 10]
+    n_clients = [2, 4, 6, 7,8,9,10]
 
     test_acc = [0] * args.n_clients
 
@@ -168,7 +200,7 @@ if __name__ == '__main__':
             print(f"============ Train round {a_iter} ============")
             print('n_clients: ', args.n_clients)
             print('the algo in execution : ', args.alg)
-            print('the param : Server Generalisation')
+            print('the param : Server Generalisation ')
             if args.alg == 'metafed':
                 for c_idx in range(args.n_clients):
                     algclass.client_train(

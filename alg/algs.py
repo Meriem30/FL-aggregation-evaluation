@@ -11,6 +11,8 @@ from alg.fedbn import fedbn
 from alg.base import base
 from alg.fedap import fedap
 from alg.metafed import metafed
+from alg.powerofchoice import powerofchoice
+from alg.feddyn import feddyn
 
 ALGORITHMS = [
     'fedavg',
@@ -18,7 +20,9 @@ ALGORITHMS = [
     'fedbn',
     'base',
     'fedap',
-    'metafed'
+    'metafed',
+    'powerofchoice',
+    'feddyn'
 ]
 
 

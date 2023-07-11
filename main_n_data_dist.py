@@ -54,7 +54,27 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     parser.add_argument('--nosharebn', action='store_true',
                         help='not share bn')
+    parser.add_argument('--diralpha', type=float,
+                        default=0.3, help='parameter for Dirichlet distribution')
+    parser.add_argument('--preprocess', type=bool,
+                        default=True, help='parameter dataset preprocess')
+    parser.add_argument('--download', type=bool,
+                        default=True, help='parameter for download dataset ')
+    parser.add_argument('--num_shards', type=int,
+                        default=None, help=' Number of shards in non-iid ``"shards"`` partition. Only works if ``partition=shards')
+    parser.add_argument('--verbose', type=bool,
+                        default=True,
+                        help='Whether to print partition process')
+    parser.add_argument('--min_require_size', type=int,
+                        default=None,
+                        help='Minimum required sample number for each client. If set to ``None``, then equals to ``num_classes``. Only works if ``partition="noniid-labeldir"``')
 
+    parser.add_argument('--unbalance_sgm', type=float,
+                        default=0.0,
+                        help='Log-normal distribution variance for unbalanced data partition over clients. Default as ``0`` for balanced partition.')
+    parser.add_argument('--balance', type=bool,
+                        default=True,
+                        help='Balanced partition over all clients or not')
     # algorithm-specific parameters
     parser.add_argument('--mu', type=float, default=1e-3,
                         help='The hyper parameter for fedprox')
@@ -64,6 +84,12 @@ if __name__ == '__main__':
                         help='init lam, hyperparmeter for metafed')
     parser.add_argument('--model_momentum', type=float,
                         default=0.5, help='hyperparameter for fedap')
+    parser.add_argument('--d', type=int,
+                        default=2, help='number of clients to be selected for powerofchoice')
+
+    parser.add_argument('--alpha', type=float,
+                        default=1e-2, help='regularization parameter for feddyn')
+
     # parse to extract arguments
     args = parser.parse_args()
 
@@ -85,6 +111,9 @@ if __name__ == '__main__':
 
     # get the prepared dataset
     train_loaders, val_loaders, test_loaders = get_data(args.dataset)(args)
+    print('train_loaders', len(train_loaders[0]))
+    print('val_loaders', len(val_loaders[0]))
+    print('test_loaders', len(test_loaders[0]))
 
     # get the class of the specified alg
     algclass = algs.get_algorithm_class(args.alg)(args)
@@ -96,6 +125,8 @@ if __name__ == '__main__':
         algclass.init_model_flag(train_loaders, val_loaders)
         args.iters = args.iters - 1
         print('Common knowledge accumulation stage')
+    elif args.alg == 'powerofchoice':
+        args.list_selected_clients = list(range(args.n_clients))
 
     # store results
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -134,7 +165,7 @@ if __name__ == '__main__':
     start_tuning = 0
     # n_clients = [5,10,15,20]
     # the number of clients must be <= 10
-    n_data_dist = [0.0, 0.025, 0.01, 0.1,0.2]
+    n_data_dist = [0.0,0.1, 0.2,0.3, 0.4,0.5, 0.6, 0.7,0.9]
 
     test_acc = [0] * args.n_clients
 
@@ -157,7 +188,8 @@ if __name__ == '__main__':
             print(f"============ Train round {a_iter} ============")
 
             print('n_clients: ', args.n_clients)
-            print('the algi in execution: ', args.alg)
+            print('the algo in execution: ', args.alg)
+            print('the param data distribution: ', n_data_dist[i])
             if args.alg == 'metafed':
                 for c_idx in range(args.n_clients):
                     algclass.client_train(

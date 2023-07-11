@@ -9,6 +9,8 @@ import csv
 import datetime
 import math
 import time
+import random
+
 
 from datautil.prepare_data import *
 from util.config import img_param_init, set_random_seed
@@ -24,11 +26,11 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--alg', type=str, default='fedavg',
-                        help='Algorithm to choose: [base | fedavg | fedbn | fedprox | fedap | metafed ]')
+                        help='Algorithm to choose: [base | fedavg | fedbn | fedprox | fedap | metafed | powerofchoice | feddyn]')
     parser.add_argument('--datapercent', type=float,
                         default=1, help='data percent to use')
     parser.add_argument('--dataset', type=str, default='medmnist',
-                        help='[ medmnist ]')
+                        help='[ medmnist , pamap, femnist, cifar10, cifar100]')
     parser.add_argument('--root_dir', type=str,
                         default='./data/', help='data path')
     parser.add_argument('--save_path', type=str,
@@ -37,7 +39,7 @@ if __name__ == '__main__':
                         default='cuda', help='[cuda | cpu]')
     parser.add_argument('--epochs', type=int, default=1, help='number of epochs')
     parser.add_argument('--batch', type=int, default=32, help='batch size')
-    parser.add_argument('--iters', type=int, default=10,
+    parser.add_argument('--iters', type=int, default=100,
                         help='iterations for communication')
     parser.add_argument('--lr', type=float, default=1e-2, help='learning rate')
     parser.add_argument('--n_clients', type=int,
@@ -45,9 +47,9 @@ if __name__ == '__main__':
     parser.add_argument('--dropout_clients', type=int,
                         default=0, help='client dropout percentage')
     parser.add_argument('--non_iid_alpha', type=float,
-                        default=0.1, help='data split for label shift')
+                        default=0.3, help='data split for label shift')
     parser.add_argument('--partition_data', type=str,
-                        default='non_iid_dirichlet', help='partition data way')
+                        default='non_iid_dirichlet', help='partition data way') # 'unbalanced'
     parser.add_argument('--plan', type=int,
                         default=10, help='choose the feature type')
     parser.add_argument('--pretrained_iters', type=int,
@@ -55,7 +57,27 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=0, help='random seed')
     parser.add_argument('--nosharebn', action='store_true',
                         help='not share bn')
-
+    parser.add_argument('--diralpha', type=float,
+                        default=0.3, help='parameter for Dirichlet distribution')
+    parser.add_argument('--preprocess', type=bool,
+                        default=False, help='parameter dataset preprocess')
+    parser.add_argument('--download', type=bool,
+                        default=False, help='parameter for download dataset ')
+    parser.add_argument('--num_shards', type=int,
+                        default=None, help=' Number of shards in non-iid ``"shards"`` partition. Only works if ``partition=shards')
+    parser.add_argument('--verbose', type=bool,
+                        default=False,
+                        help='Whether to print partition process')
+    parser.add_argument('--min_require_size', type=int,
+                        default=None,
+                        help='Minimum required sample number for each client. If set to ``None``, then equals to ``num_classes``. Only works if ``partition="noniid-labeldir"``')
+    #unbalance_sgm = 0.3
+    parser.add_argument('--unbalance_sgm', type=float,
+                        default=0.3,
+                        help='Log-normal distribution variance for unbalanced data partition over clients. Default as ``0`` for balanced partition.')
+    parser.add_argument('--balance', type=bool,
+                        default=False,
+                        help='Balanced partition over all clients or not')
     # algorithm-specific parameters
     parser.add_argument('--mu', type=float, default=1e-3,
                         help='The hyper parameter for fedprox')
@@ -65,6 +87,12 @@ if __name__ == '__main__':
                         help='init lam, hyperparmeter for metafed')
     parser.add_argument('--model_momentum', type=float,
                         default=0.5, help='hyperparameter for fedap')
+    parser.add_argument('--d', type=int,
+                        default=2, help='number of clients to be selected for powerofchoice')
+
+    parser.add_argument('--alpha', type=float,
+                        default=1e-2, help='regularization parameter for feddyn')
+
     # parse to extract arguments
     args = parser.parse_args()
 
@@ -84,12 +112,8 @@ if __name__ == '__main__':
         os.makedirs(args.save_path)
     SAVE_PATH = os.path.join(args.save_path, args.alg)
 
-    # get the prepared dataset
-    train_loaders, val_loaders, test_loaders = get_data(args.dataset)(args)
-
-    # get the class of the specified alg
-    algclass = algs.get_algorithm_class(args.alg)(args)
-
+    # moved the data loader within the loop of different number of clients
+    # moved the class initialization within the loop to correct list of index out of range
     # special params
     if args.alg == 'fedap':
         algclass.set_client_weight(train_loaders)
@@ -97,6 +121,8 @@ if __name__ == '__main__':
         algclass.init_model_flag(train_loaders, val_loaders)
         args.iters = args.iters - 1
         print('Common knowledge accumulation stage')
+    elif args.alg == 'powerofchoice':
+        args.list_selected_clients = list(range(args.n_clients))
 
     # store results
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -105,7 +131,7 @@ if __name__ == '__main__':
         date)
 
     # create folder to save n_clients results
-    results_folder = os.path.join(os.path.dirname(__file__), "results/n_clients/" + exp_folder)
+    results_folder = os.path.join(os.path.dirname(__file__), "results/n_clients/{}_balance_{}_dist_{}_".format(args.dataset,args.balance,args.partition_data) + exp_folder)
     os.mkdir(results_folder)
 
     # create a csv (or .txt) file to save the results-file-name for each alg
@@ -133,18 +159,36 @@ if __name__ == '__main__':
         csv_writer.writeheader()
 
     start_tuning = 0
-    # n_clients = [5,10,15,20]
-    # the number of clients must be <= 10
-    n_clients = [2, 5, 8, 10]
+
+    # if dataset = medmnist , the number of clients must be <= 10
+    if args.dataset == 'medmnist':
+        n_clients = [3, 5, 7, 9,10]
+        list_d =    [2,3, 5, 7, 8]  # we select 0.8% of all clients
+    else:
+        n_clients = [50,100,150,200,250]
+        list_d = [40, 80, 120, 160, 200] # we select 0.8% of all clients
 
     test_acc = [0] * args.n_clients
 
     # loop over the n_clients param and train the model
     for i in range(start_tuning, len(n_clients)):
-
+        train_loaders, val_loaders, test_loaders = [],[],[]
         best_changed = False
 
         args.n_clients = n_clients[i]
+        args.d = list_d[i]
+
+        # get the prepared dataset
+        train_loaders, val_loaders, test_loaders = get_data(args.dataset)(args)
+        print('train_loaders list ', len(train_loaders))
+        print('val_loaders list ', len(val_loaders))
+        print('test_loaders list', len(test_loaders))
+
+        # get the class of the specified alg
+        algclass = algs.get_algorithm_class(args.alg)(args)
+
+        if args.alg == 'powerofchoice':
+            args.list_selected_clients = list(range(args.n_clients))
         best_acc = [0] * args.n_clients
         best_tacc = [0] * args.n_clients
         mean_acc_test = 0
@@ -164,11 +208,36 @@ if __name__ == '__main__':
                     algclass.client_train(
                         c_idx, train_loaders[algclass.csort[c_idx]], a_iter)
                 algclass.update_flag(val_loaders)
+
+            elif args.alg == 'powerofchoice':
+                # local client training
+                list_index_clients = []
+                if a_iter == 0:
+                    list_index_clients = algclass.sample_condidates(args)
+                    args.list_selected_clients = list_index_clients
+                    print("list_index_clients " ,args.list_selected_clients)
+                    print('number of client to be selected ',args.d)
+                else:
+                    condidates = list(range(args.n_clients))
+                    list_index_clients = algclass.sample_clients(args, condidates,train_loss)
+                    args.list_selected_clients = list_index_clients
+                    print("list_index_clients",args.list_selected_clients)
+                    print('number of client to be selected ', args.d)
+
+                for epochs in range(args.epochs):
+                    for client_idx in range(args.n_clients):
+                        if client_idx in list_index_clients:
+                            algclass.client_train(
+                                client_idx, train_loaders[client_idx], a_iter)
+                        else:
+                            pass
+
+                # server aggregation
+                algclass.server_aggre()
             else:
                 # local client training
                 for epochs in range(args.epochs):
                     for client_idx in range(args.n_clients):
-
                         algclass.client_train(
                             client_idx, train_loaders[client_idx], a_iter)
 
@@ -213,7 +282,10 @@ if __name__ == '__main__':
 
     # close the results file when the loop is over
     f.close()
-    cc
+    tf = (time.time() - t0) / 60
+    print('the time now is : ')
+    print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    print('the execution takes (min.) ', tf)
 
 # run : python main_n_clients.py --alg fedavg --dataset medmnist --iters 3 --epochs 1 --non_iid_alpha 0.1
 

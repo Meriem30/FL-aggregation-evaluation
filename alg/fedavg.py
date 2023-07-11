@@ -30,6 +30,7 @@ class fedavg(torch.nn.Module):
         return train_loss, train_acc
 
     def server_aggre(self):
+        print('len client_model', len(self.client_model))
         self.server_model, self.client_model = communication(
             self.args, self.server_model, self.client_model, self.client_weight)
 
