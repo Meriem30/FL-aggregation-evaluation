@@ -131,8 +131,8 @@ if __name__ == '__main__':
         date)
 
     # create folder to save n_clients results
-    results_folder = os.path.join(os.path.dirname(__file__), "results/n_clients/{}_balance_{}_dist_{}_".format(args.dataset,args.balance,args.partition_data) + exp_folder)
-    os.mkdir(results_folder)
+    results_folder = os.path.join(os.path.dirname(__file__), "results", "n_clients", f"{args.dataset}_balance_{args.balance}_dist_{args.partition_data}_" + exp_folder)
+    os.makedirs(results_folder, exist_ok=True)
 
     # create a csv (or .txt) file to save the results-file-name for each alg
     res_files_name = "results/n_clients/name_file_res_algos.csv"
