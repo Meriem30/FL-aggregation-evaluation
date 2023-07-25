@@ -23,13 +23,12 @@ if __name__ == '__main__':
     print('the time now is : ')
     print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
 
-    parser = argparse.ArgumentParser()
     parser.add_argument('--alg', type=str, default='fedavg',
-                        help='Algorithm to choose: [base | fedavg | fedbn | fedprox | fedap | metafed ]')
+                        help='Algorithm to choose: [base | fedavg | fedbn | fedprox | fedap | metafed | powerofchoice | feddyn]')
     parser.add_argument('--datapercent', type=float,
                         default=1, help='data percent to use')
     parser.add_argument('--dataset', type=str, default='medmnist',
-                        help='[ medmnist ]')
+                        help='[ medmnist , pamap, femnist, cifar10, cifar100]')
     parser.add_argument('--root_dir', type=str,
                         default='./data/', help='data path')
     parser.add_argument('--save_path', type=str,
@@ -38,19 +37,17 @@ if __name__ == '__main__':
                         default='cuda', help='[cuda | cpu]')
     parser.add_argument('--epochs', type=int, default=1, help='number of epochs')
     parser.add_argument('--batch', type=int, default=32, help='batch size')
-    parser.add_argument('--iters', type=int, default=10,
+    parser.add_argument('--iters', type=int, default=100,
                         help='iterations for communication')
     parser.add_argument('--lr', type=float, default=1e-2, help='learning rate')
     parser.add_argument('--n_clients', type=int,
                         default=10, help='number of clients')
-    parser.add_argument('--het_level', type=float,
-                        default=0, help='level of system heterogeneity')
     parser.add_argument('--dropout_clients', type=int,
                         default=0, help='client dropout percentage')
     parser.add_argument('--non_iid_alpha', type=float,
-                        default=0.1, help='data split for label shift')
+                        default=0.3, help='data split for label shift')
     parser.add_argument('--partition_data', type=str,
-                        default='non_iid_dirichlet', help='partition data way')
+                        default='non_iid_dirichlet', help='partition data way')  # 'unbalanced'
     parser.add_argument('--plan', type=int,
                         default=10, help='choose the feature type')
     parser.add_argument('--pretrained_iters', type=int,
@@ -61,23 +58,24 @@ if __name__ == '__main__':
     parser.add_argument('--diralpha', type=float,
                         default=0.3, help='parameter for Dirichlet distribution')
     parser.add_argument('--preprocess', type=bool,
-                        default=True, help='parameter dataset preprocess')
+                        default=False, help='parameter dataset preprocess')
     parser.add_argument('--download', type=bool,
-                        default=True, help='parameter for download dataset ')
+                        default=False, help='parameter for download dataset ')
     parser.add_argument('--num_shards', type=int,
-                        default=None, help=' Number of shards in non-iid ``"shards"`` partition. Only works if ``partition=shards')
+                        default=None,
+                        help=' Number of shards in non-iid ``"shards"`` partition. Only works if ``partition=shards')
     parser.add_argument('--verbose', type=bool,
-                        default=True,
+                        default=False,
                         help='Whether to print partition process')
     parser.add_argument('--min_require_size', type=int,
                         default=None,
                         help='Minimum required sample number for each client. If set to ``None``, then equals to ``num_classes``. Only works if ``partition="noniid-labeldir"``')
-
+    # unbalance_sgm = 0.3
     parser.add_argument('--unbalance_sgm', type=float,
-                        default=0.0,
+                        default=0.3,
                         help='Log-normal distribution variance for unbalanced data partition over clients. Default as ``0`` for balanced partition.')
     parser.add_argument('--balance', type=bool,
-                        default=True,
+                        default=False,
                         help='Balanced partition over all clients or not')
     # algorithm-specific parameters
     parser.add_argument('--mu', type=float, default=1e-3,
@@ -93,7 +91,10 @@ if __name__ == '__main__':
 
     parser.add_argument('--alpha', type=float,
                         default=1e-2, help='regularization parameter for feddyn')
-
+    parser.add_argument('--major_classes_num', type=int,
+                        default=2, help='maximum number of classes in each client for Quantitybased distrinution skew')
+    parser.add_argument('--het_level', type=float,
+                        default=0, help='level of system heterogeneity')
     # parse to extract arguments
 
     args = parser.parse_args()
@@ -140,7 +141,7 @@ if __name__ == '__main__':
         date)
 
     # create folder to save n_clients results
-    results_folder = os.path.join(os.path.dirname(__file__), "results/sys_heterog/" + exp_folder)
+    results_folder = os.path.join(os.path.dirname(__file__), "results","sys_heterog" +  f"{args.dataset}_balance_{args.balance}_dist_{args.partition_data}_" + exp_folder)
     os.mkdir(results_folder)
 
     # create a csv (or .txt) file to save the results-file-name for each alg
@@ -169,13 +170,12 @@ if __name__ == '__main__':
 
     start_tuning = 0
 
-    n_het_level = [0.0, 0.1, 0.3,0.5, 0.9]
-    n_epochs = [1,3,5]
+    n_het_level = [0.0, 0.1,0.2, 0.3,0.4,0.5, 0.9]
+    n_epochs = [5]
 
     test_acc = [0] * args.n_clients
     j = 0
     for j in range(len(n_epochs)):
-        # loop over the n_clients param and train the model
         for i in range(start_tuning, len(n_het_level)):
             args.epochs = n_epochs[j]
 
@@ -215,6 +215,42 @@ if __name__ == '__main__':
                                 client_idx, train_loaders[algclass.csort[client_idx]], a_iter)
 
                     algclass.update_flag(val_loaders)
+                elif args.alg == 'powerofchoice':
+                    # local client training
+                    list_index_clients = []
+                    if a_iter == 0:
+                        list_index_clients = algclass.sample_condidates(args)
+                        args.list_selected_clients = list_index_clients
+                        print("list_index_clients ", args.list_selected_clients)
+                        print('number of client to be selected ', args.d)
+                    else:
+                        condidates = list(range(args.n_clients))
+                        list_index_clients = algclass.sample_clients(args, condidates, train_loss)
+                        args.list_selected_clients = list_index_clients
+                        print("list_index_clients", args.list_selected_clients)
+                        print('number of client to be selected ', args.d)
+                    # local client training for normal worker
+                    for epochs in range(args.epochs):
+                        for client_idx in range(normal_wl):
+                            if client_idx in list_index_clients:
+                                algclass.client_train(
+                                    client_idx, train_loaders[client_idx], a_iter)
+                            else:
+                                pass
+                    #local training for worker with system constraint
+                    for epochs in range(args.epochs):
+                        args.epochs = x
+                        for client_idx in range(partial_wk, args.n_clients):
+                            if client_idx in list_index_clients:
+                                algclass.client_train(
+                                    client_idx, train_loaders[client_idx], a_iter)
+                            else:
+                                pass
+
+                    # server aggregation
+                    algclass.server_aggre()
+
+
                 else:
 
                     # local client training for normal worker
