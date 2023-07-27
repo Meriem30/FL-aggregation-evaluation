@@ -22,6 +22,7 @@ if __name__ == '__main__':
     t0 = time.time()
     print('the time now is : ')
     print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    parser = argparse.ArgumentParser()
 
     parser.add_argument('--alg', type=str, default='fedavg',
                         help='Algorithm to choose: [base | fedavg | fedbn | fedprox | fedap | metafed | powerofchoice | feddyn]')
@@ -87,7 +88,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_momentum', type=float,
                         default=0.5, help='hyperparameter for fedap')
     parser.add_argument('--d', type=int,
-                        default=2, help='number of clients to be selected for powerofchoice')
+                        default=35, help='number of clients to be selected for powerofchoice')
 
     parser.add_argument('--alpha', type=float,
                         default=1e-2, help='regularization parameter for feddyn')
@@ -141,7 +142,7 @@ if __name__ == '__main__':
         date)
 
     # create folder to save n_clients results
-    results_folder = os.path.join(os.path.dirname(__file__), "results","sys_heterog" +  f"{args.dataset}_balance_{args.balance}_dist_{args.partition_data}_" + exp_folder)
+    results_folder = os.path.join(os.path.dirname(__file__), "results","sys_heterog" ,  f"{args.dataset}_balance_{args.balance}_dist_{args.partition_data}_" + exp_folder)
     os.mkdir(results_folder)
 
     # create a csv (or .txt) file to save the results-file-name for each alg
@@ -170,14 +171,13 @@ if __name__ == '__main__':
 
     start_tuning = 0
 
-    n_het_level = [0.0, 0.1,0.2, 0.3,0.4,0.5, 0.9]
+    n_het_level = [0.1,0.2, 0.3,0.4,0.5, 0.9]
     n_epochs = [5]
 
     test_acc = [0] * args.n_clients
-    j = 0
-    for j in range(len(n_epochs)):
-        for i in range(start_tuning, len(n_het_level)):
-            args.epochs = n_epochs[j]
+
+    for i in range(start_tuning, len(n_het_level)):
+
 
             best_changed = False
 
@@ -300,19 +300,19 @@ if __name__ == '__main__':
             with open(results_folder + "/acc.csv", newline='', encoding='utf-8', mode='a') as f:
                 csv_writer = csv.DictWriter(f, fieldnames)
                 csv_writer.writerow({'n-level': args.het_level,
-                                     'origin-epoch' : n_epochs[j],
+                                     'origin-epoch' : n_epochs[0],
                                      'rand-epoch' : x ,
                                      'avg-test-accuracy': mean_acc_test,
                                      'avg-train-loss': mean_train_loss,
                                      'fairness-var': fair_var
                                      })
 
-        # close the results file when the loop is over
-        f.close()
-        tf = (time.time() - t0) / 60
-        print('the time now is : ')
-        print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-        print('the execution takes (min.) ', tf)
+    # close the results file when the loop is over
+    f.close()
+    tf = (time.time() - t0) / 60
+    print('the time now is : ')
+    print(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    print('the execution takes (min.) ', tf)
 
 
 
