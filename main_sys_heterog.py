@@ -177,8 +177,7 @@ if __name__ == '__main__':
     test_acc = [0] * args.n_clients
 
     for i in range(start_tuning, len(n_het_level)):
-
-
+            args.epochs = n_epochs[0]
             best_changed = False
 
             args.het_level = n_het_level[i]
