@@ -130,7 +130,7 @@ if __name__ == '__main__':
     # store results
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-    exp_folder = f"accuracy_results_{args.alg}_{args.datapercent}_{args.non_iid_alpha}_{args.mu}_{args.iters}_{args.epochs}" + str(
+    exp_folder = f"accuracy_results_{args.alg}_{args.dataset}_{args.n_clients}_{args.partition_data}_{args.diralpha}_{args.datapercent}_{args.non_iid_alpha}_{args.iters}_{args.epochs}_{args.batch}" + str(
         date)
 
     # create folder to save n_clients results
