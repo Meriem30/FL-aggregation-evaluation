@@ -243,14 +243,15 @@ def pamap(args):
     return trd, vad, ted
 
 def femnist(args):
-    path = os.path.join("./split/", "femnist_{}_{}_{}".format(args.datapercent, args.n_clients, args.partition_data))
+    path = os.path.join("./split/", "femnist_{}_{}_{}_{}_{}".format(args.datapercent, args.n_clients, args.partition_data, args.major_classes_num, args.diralpha))
     fed_femnist = PartitionedFEMNIST(root="./data/femnist/",
                                              path=path ,
                                              num_clients=args.n_clients,
+                                             major_classes_num = args.major_classes_num,
                                              partition=args.partition_data , # "unbalance", "noniid-labeldir"
                                              dir_alpha=args.diralpha,
                                              seed=args.seed,
-                                             #preprocess=args.preprocess,
+                                             preprocess=args.preprocess,
                                              download=True,
                                              verbose=False,
                                              transform=transforms.Compose(

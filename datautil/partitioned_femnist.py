@@ -34,6 +34,7 @@ class PartitionedFEMNIST(FedDataset):
                  root,
                  path,
                  num_clients,
+                 major_classes_num,
                  download=True,
                  preprocess=True,
                  partition="iid",
@@ -48,10 +49,12 @@ class PartitionedFEMNIST(FedDataset):
         self.num_clients = num_clients
         self.transform = transform
         self.targt_transform = target_transform
+        self.major_classes_num = major_classes_num
 
         if preprocess:
             self.preprocess(partition=partition,
                             dir_alpha=dir_alpha,
+                            major_classes_num = major_classes_num,
                             verbose=verbose,
                             seed=seed,
                             download=download,
@@ -61,6 +64,7 @@ class PartitionedFEMNIST(FedDataset):
     def preprocess(self,
                    partition="iid",
                    dir_alpha=None,
+                   major_classes_num=10,
                    verbose=True,
                    seed=None,
                    download=True,
@@ -112,6 +116,7 @@ class PartitionedFEMNIST(FedDataset):
                                        self.num_clients,
                                        partition=partition,
                                        dir_alpha=dir_alpha,
+                                       major_classes_num = major_classes_num,
                                        verbose=verbose,
                                        seed=seed)
 
@@ -119,6 +124,7 @@ class PartitionedFEMNIST(FedDataset):
                                        self.num_clients,
                                        partition=partition,
                                        dir_alpha=dir_alpha,
+                                       major_classes_num=major_classes_num,
                                        verbose=verbose,
                                        seed=seed)
 
@@ -126,6 +132,7 @@ class PartitionedFEMNIST(FedDataset):
                                        self.num_clients,
                                        partition=partition,
                                        dir_alpha=dir_alpha,
+                                       major_classes_num=major_classes_num,
                                        verbose=verbose,
                                        seed=seed)
 

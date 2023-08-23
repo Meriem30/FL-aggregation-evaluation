@@ -100,6 +100,9 @@ if __name__ == '__main__':
     args.random_state = np.random.RandomState(1)
     set_random_seed(args.seed)
 
+    # add a param needed for "noniid-#label" distribution
+    args.major_classes_num = 10
+
     # create folder to save checkpoints
     exp_folder = f'fed_{args.dataset}_{args.alg}_{args.datapercent}_{args.non_iid_alpha}_{args.mu}_{args.model_momentum}_{args.plan}_{args.lam}_{args.threshold}_{args.iters}_{args.epochs}'
     if args.nosharebn:
@@ -109,11 +112,7 @@ if __name__ == '__main__':
         os.makedirs(args.save_path)
     SAVE_PATH = os.path.join(args.save_path, args.alg)
 
-    # get the prepared dataset
-    train_loaders, val_loaders, test_loaders = get_data(args.dataset)(args)
-    print('train_loaders', len(train_loaders[0]))
-    print('val_loaders', len(val_loaders[0]))
-    print('test_loaders', len(test_loaders[0]))
+
 
     # get the class of the specified alg
     algclass = algs.get_algorithm_class(args.alg)(args)
@@ -167,14 +166,24 @@ if __name__ == '__main__':
     # the number of clients must be <= 10
     n_data_dist = [0.0,0.1, 0.2,0.3, 0.4,0.5, 0.6, 0.7,0.9]
 
+    list_major_classes_num = [2,3,4,5,6,7,8]
+
     test_acc = [0] * args.n_clients
 
     # loop over the n_data_distribution param and train the model
-    for i in range(start_tuning, len(n_data_dist)):
+    for i in range(start_tuning, len(list_major_classes_num)):
 
         best_changed = False
 
-        args.non_iid_alpha = n_data_dist[i]
+        #args.diralpha  = n_data_dist[i]
+        args.major_classes_num = list_major_classes_num[i]
+
+        # get the prepared dataset
+        train_loaders, val_loaders, test_loaders = get_data(args.dataset)(args)
+        print('train_loaders', len(train_loaders[0]))
+        print('val_loaders', len(val_loaders[0]))
+        print('test_loaders', len(test_loaders[0]))
+
         best_acc = [0] * args.n_clients
         best_tacc = [0] * args.n_clients
         mean_acc_test = 0
@@ -189,7 +198,7 @@ if __name__ == '__main__':
 
             print('n_clients: ', args.n_clients)
             print('the algo in execution: ', args.alg)
-            print('the param data distribution: ', n_data_dist[i])
+            print('the param data distribution (label dist skew quantity based): ', args.major_classes_num)
             if args.alg == 'metafed':
                 for c_idx in range(args.n_clients):
                     algclass.client_train(
