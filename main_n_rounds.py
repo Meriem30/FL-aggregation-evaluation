@@ -169,7 +169,7 @@ if __name__ == '__main__':
         csv_writer.writeheader()
 
     #list of n_rounds
-    n_rounds = [100, 200, 300, 400, 500, 600,800, 1000]
+    n_rounds = [100, 200, 300, 400, 500, 600]
 
     # loop over the n_rounds param and train the model
     for i in range(len(n_rounds)):
@@ -197,9 +197,35 @@ if __name__ == '__main__':
                     algclass.client_train(
                         c_idx, train_loaders[algclass.csort[c_idx]], a_iter)
                 algclass.update_flag(val_loaders)
+
+            elif args.alg == 'powerofchoice':
+                # local client training
+                list_index_clients = []
+                if a_iter == 0:
+                    list_index_clients = algclass.sample_condidates(args)
+                    args.list_selected_clients = list_index_clients
+                    print("list_index_clients ", args.list_selected_clients)
+                    print('number of client to be selected ', args.d)
+                else:
+                    condidates = list(range(args.n_clients))
+                    list_index_clients = algclass.sample_clients(args, condidates, train_loss)
+                    args.list_selected_clients = list_index_clients
+                    print("list_index_clients", args.list_selected_clients)
+                    print('number of client to be selected ', args.d)
+
+                for epochs in range(args.epochs):
+                    for client_idx in range(args.n_clients):
+                        if client_idx in list_index_clients:
+                            algclass.client_train(
+                                client_idx, train_loaders[client_idx], a_iter)
+                        else:
+                            pass
+
+                # server aggregation
+                algclass.server_aggre()
             else:
                 # local client training
-                for epoch in range(args.epochs):
+                for epochs in range(args.epochs):
                     for client_idx in range(args.n_clients):
                         algclass.client_train(
                             client_idx, train_loaders[client_idx], a_iter)

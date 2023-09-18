@@ -166,7 +166,7 @@ if __name__ == '__main__':
         csv_writer.writeheader()
 
     #list of dropout percentage values
-    n_droup = [0, 0.1, 0.2, 0.4 ,0.5, 0.6, 0.7,0.9]
+    n_droup = [ 0.6,0.5,0.4, 0.3,0.2,0,1 ]
 
     # loop over the n_rounds param and train the model
     for i in range(len(n_droup)):
@@ -198,6 +198,7 @@ if __name__ == '__main__':
                     algclass.update_flag(val_loaders)
             else:
                 # local client training
+
                 for epoch in range(args.epochs):
                     for client_idx in range(args.n_clients):
                         algclass.client_train(

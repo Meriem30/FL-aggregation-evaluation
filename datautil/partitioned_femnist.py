@@ -36,7 +36,7 @@ class PartitionedFEMNIST(FedDataset):
                  num_clients,
                  major_classes_num,
                  download=True,
-                 preprocess=True,
+                 preprocess=False,
                  partition="iid",
                  dir_alpha=None,
                  verbose=True,

@@ -13,7 +13,7 @@ class powerofchoice(fedavg):
 
     def sample_clients(self, args, condidates, losses):
         sort = np.array(losses).argsort().tolist()
-        sort.reverse()
+        #sort.reverse()
         selected_clients = np.array(condidates)[sort][0:args.d]
         return selected_clients.tolist()
 
